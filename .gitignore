@@ -1,0 +1,29 @@
+# Secrets
+.env
+*.env
+secrets.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+__MACOSX/
+Thumbs.db
+
+# Harbor logs (large generated output — local only)
+logs/
+
+# Temp / build
+*.tar
+.ipynb_checkpoints/
+
+# Local notes (keep off repo)
+*.pdf
+notes.txt
+
+# Sample zip (already extracted)
+*.zip
