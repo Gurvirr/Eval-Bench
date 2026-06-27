@@ -21,9 +21,8 @@ logs/
 *.tar
 .ipynb_checkpoints/
 
-# Local notes (keep off repo)
-*.pdf
-notes.txt
+# Planning
+planning/
 
 # Sample zip (already extracted)
 *.zip
