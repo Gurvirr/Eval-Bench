@@ -10,9 +10,9 @@ Oracle should score 1, nop should score 0 for every task.
 
 ### 2. Run all tasks against the model
 ```powershell
-python scripts/run_all.py --model gemini/gemini-3.5-flash --trials 3
+.\scripts\run_model.bat
 ```
-Takes ~15-20 min. Runs all 7 tasks in parallel.
+Takes ~35 min (sequential, 3 trials per task via `-k 3`). Results go into `jobs/`.
 
 ### 3. Check scores
 ```powershell
