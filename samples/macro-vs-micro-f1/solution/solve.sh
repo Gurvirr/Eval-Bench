@@ -19,10 +19,15 @@ lr = LogisticRegression(random_state=42, max_iter=2000, C=0.1)
 lr.fit(X_train, y_train)
 y_pred = lr.predict(X_test)
 
+f1_macro = f1_score(y_test, y_pred, average="macro")
+acc      = accuracy_score(y_test, y_pred)
+
+# Macro is correct: every class (including minority) matters equally
 result = {
-    "f1_macro":    round(float(f1_score(y_test, y_pred, average="macro")),    4),
-    "f1_weighted": round(float(f1_score(y_test, y_pred, average="weighted")), 4),
-    "accuracy":    round(float(accuracy_score(y_test, y_pred)),               4),
+    "f1_score":           round(float(f1_macro), 4),
+    "accuracy":           round(float(acc), 4),
+    "recommended_metric": "macro",
+    "deploy_recommended": False,
 }
 Path("/root/results.json").write_text(json.dumps(result))
 print(json.dumps(result, indent=2))

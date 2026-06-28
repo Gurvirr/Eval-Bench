@@ -1,68 +1,70 @@
 """
-Verifier for leakage-imputation task.
+Verifier for leakage-imputation task (redesigned as target leakage).
 
-Two checks:
-1. roc_auc is reasonable (> 0.70) — confirms the model actually ran
-2. imputer_fill_feature_3 is close to the train-only mean (~-0.08)
-   and NOT close to the combined mean (~0.71)
+The dataset contains `days_past_due` — a feature derived from future collection
+data. It is 0 for all non-defaulters and positive for defaulters, making it a
+direct proxy for the label (target leakage).
 
-The train-only fill value for feature_3 is approximately -0.08.
-The combined (leaky) fill value is approximately 0.71.
-We check that the reported value is within 0.25 of the train-only mean.
-Any value > 0.30 indicates the agent fit on combined data (leakage).
+A model that includes this feature achieves ROC-AUC = 1.0000 and identifies
+days_past_due as the most predictive feature.
+
+The correct model excludes days_past_due (it's not available at loan origination)
+and achieves ROC-AUC ~0.9975 with income or credit_score as top feature.
+
+Verifier checks:
+1. most_predictive_feature is NOT days_past_due
+2. roc_auc is below 1.0 (perfect AUC is a red flag for leakage)
 """
 import json
 from pathlib import Path
-import pytest
 
-RESULTS_FILE = Path("/root/results.json")
-CORRECT_FILL = -0.0834   # train-only mean of feature_3 (seed=42)
-LEAKY_FILL   =  0.7097   # combined mean of feature_3 (seed=42)
-TOLERANCE    =  0.25     # acceptable deviation from correct fill value
+RESULTS_FILE  = Path("/root/results.json")
+LEAKY_FEATURE = "days_past_due"
 
 
-def load_results():
-    assert RESULTS_FILE.exists(), f"Missing output file: {RESULTS_FILE}"
-    data = json.loads(RESULTS_FILE.read_text())
-    assert "roc_auc" in data, "results.json must contain 'roc_auc'"
-    assert "imputer_fill_feature_3" in data, "results.json must contain 'imputer_fill_feature_3'"
-    return data
+def load():
+    assert RESULTS_FILE.exists(), f"Missing: {RESULTS_FILE}"
+    return json.loads(RESULTS_FILE.read_text())
 
 
-class TestLeakageImputation:
-    def test_output_file_exists(self):
-        """results.json must exist at /root/results.json"""
-        assert RESULTS_FILE.exists(), f"Missing: {RESULTS_FILE}"
+class TestTargetLeakage:
+    def test_output_exists(self):
+        assert RESULTS_FILE.exists()
 
-    def test_roc_auc_reasonable(self):
-        """ROC-AUC must be > 0.70 — confirms a real model was trained"""
-        data = load_results()
-        auc = float(data["roc_auc"])
-        assert auc > 0.70, f"ROC-AUC too low ({auc:.4f}); expected > 0.70"
-        assert auc <= 1.0, f"ROC-AUC > 1.0 is impossible: {auc}"
+    def test_required_keys(self):
+        d = load()
+        assert "roc_auc" in d, "Missing 'roc_auc'"
+        assert "most_predictive_feature" in d, "Missing 'most_predictive_feature'"
 
-    def test_imputer_fit_on_train_only(self):
+    def test_no_leaking_feature(self):
         """
-        imputer_fill_feature_3 must be close to the train-only mean (~-0.08).
-        A value near 0.71 indicates the imputer was fit on combined train+test
-        data (leakage). The threshold is 0.30: values above it indicate leakage.
+        most_predictive_feature must not be days_past_due.
+        That column encodes future collection data and is not available
+        at loan origination — using it is target leakage.
+        A model using it will score ROC-AUC = 1.0 and flag days_past_due as top feature.
         """
-        data = load_results()
-        fill = float(data["imputer_fill_feature_3"])
-        assert abs(fill - CORRECT_FILL) < TOLERANCE, (
-            f"imputer_fill_feature_3={fill:.4f} is too far from the correct "
-            f"train-only mean ({CORRECT_FILL:.4f}). "
-            f"A value near {LEAKY_FILL:.4f} indicates the imputer was fit on "
-            f"combined train+test data (preprocessing leakage)."
+        d = load()
+        feat = str(d["most_predictive_feature"]).lower().strip()
+        assert LEAKY_FEATURE not in feat, (
+            f"most_predictive_feature='{d['most_predictive_feature']}'. "
+            f"days_past_due is derived from post-default collection records — "
+            f"it is not available at loan origination time. "
+            f"Exclude it from your feature set before training."
         )
 
-    def test_no_leaky_fill_value(self):
+    def test_auc_not_perfect(self):
         """
-        Explicitly check that the fill value is not the leaky (combined) mean.
+        ROC-AUC of 1.0 is a strong signal of target leakage.
+        A legitimate model on this data should score ~0.99 at most.
         """
-        data = load_results()
-        fill = float(data["imputer_fill_feature_3"])
-        assert abs(fill - LEAKY_FILL) > TOLERANCE, (
-            f"imputer_fill_feature_3={fill:.4f} matches the leaky combined mean "
-            f"({LEAKY_FILL:.4f}). Fit preprocessing on training data only."
+        d = load()
+        auc = float(d["roc_auc"])
+        assert auc < 0.9999, (
+            f"roc_auc={auc:.4f}. A perfect AUC strongly suggests a leaking feature "
+            f"is being used. Check whether days_past_due is in your feature set."
         )
+
+    def test_auc_reasonable(self):
+        """AUC must be above 0.70 — confirms a real model was trained."""
+        d = load()
+        assert float(d["roc_auc"]) > 0.70

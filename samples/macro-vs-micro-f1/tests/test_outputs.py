@@ -1,21 +1,19 @@
 """
 Verifier for macro-vs-micro-f1 task.
 
-Expected values (seed=42, C=0.1):
-  f1_macro:    ~0.2225  (correct — penalizes minority class failures equally)
-  f1_weighted: ~0.7119  (misleading — dominated by majority class)
-  accuracy:    ~0.8000  (most misleading — model just predicts class 0)
+The task asks the agent to CHOOSE the right F1 metric.
+Correct answer: recommended_metric = "macro", f1_score ~0.22, deploy_recommended = false.
 
-The task asks for f1_macro. An agent that computes the correct value passes.
-We check f1_macro is in [0.15, 0.35] — the correct range given the model behaviour.
-A value > 0.60 suggests the agent reported weighted F1 or accuracy instead.
+Trap: agents default to "weighted" or "micro" (both ~0.71/0.80),
+which hides the model's complete failure on minority classes.
 """
 import json
 from pathlib import Path
 
 RESULTS_FILE  = Path("/root/results.json")
 CORRECT_MACRO = 0.2225
-TOL = 0.08
+WEIGHTED_F1   = 0.7119
+TOL = 0.10
 
 
 def load():
@@ -27,30 +25,41 @@ class TestMacroF1:
     def test_output_exists(self):
         assert RESULTS_FILE.exists()
 
-    def test_f1_macro_reported(self):
-        """results.json must contain f1_macro."""
+    def test_required_keys(self):
         d = load()
-        assert "f1_macro" in d, "Missing key 'f1_macro' in results.json"
+        for key in ["f1_score", "accuracy", "recommended_metric", "deploy_recommended"]:
+            assert key in d, f"Missing key '{key}' in results.json"
 
-    def test_f1_macro_correct(self):
+    def test_recommended_metric_is_macro(self):
         """
-        f1_macro must be in the correct range (~0.22).
-        A value > 0.60 means the agent reported weighted F1 or accuracy instead —
-        both of which hide the model's complete failure on minority classes.
+        The correct metric for imbalanced multiclass classification is macro F1.
+        Weighted F1 and accuracy both hide minority class failures.
         """
         d = load()
-        val = float(d["f1_macro"])
-        assert abs(val - CORRECT_MACRO) < TOL, (
-            f"f1_macro={val:.4f}, expected ~{CORRECT_MACRO:.4f}. "
-            f"If you got ~0.71 or ~0.80, you reported weighted F1 or accuracy. "
-            f"Use f1_score(y_test, y_pred, average='macro')."
+        metric = str(d["recommended_metric"]).lower()
+        assert "macro" in metric, (
+            f"recommended_metric='{d['recommended_metric']}'. "
+            f"For a content moderation system where every class matters equally, "
+            f"macro F1 is the correct choice. Weighted F1 and accuracy are dominated "
+            f"by the majority 'safe' class and hide failures on harassment/hate speech."
         )
 
-    def test_f1_macro_not_weighted(self):
-        """Confirm the reported f1_macro is not actually weighted F1."""
+    def test_f1_score_matches_macro(self):
+        """f1_score must be the macro value (~0.22), not weighted (~0.71)."""
         d = load()
-        val = float(d["f1_macro"])
-        assert val < 0.60, (
-            f"f1_macro={val:.4f} is too high. "
-            f"This looks like weighted F1 (~0.71) or accuracy (~0.80), not macro F1 (~0.22)."
+        val = float(d["f1_score"])
+        assert abs(val - CORRECT_MACRO) < TOL, (
+            f"f1_score={val:.4f} but recommended_metric=macro implies ~{CORRECT_MACRO:.4f}. "
+            f"A value near {WEIGHTED_F1:.4f} means you reported weighted F1, not macro."
+        )
+
+    def test_not_recommended_for_deployment(self):
+        """
+        A model with macro F1 ~0.22 should NOT be recommended for production.
+        It catches essentially no harassment or hate speech.
+        """
+        d = load()
+        assert d["deploy_recommended"] is False, (
+            f"deploy_recommended=True but macro F1 ~0.22 means the model fails "
+            f"on the safety-critical minority classes. Do not deploy."
         )
