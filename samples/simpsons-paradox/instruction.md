@@ -1,13 +1,17 @@
-You are a data analyst at a healthcare company reviewing a clinical trial.
+You are a data analyst reviewing a multi-site clinical trial of a new drug.
 
-The file `/root/data/trial.csv` contains results from a randomized trial of a new drug:
-- `patient_id` — unique patient identifier
-- `severity` — patient severity group (mild, moderate, or severe)
-- `treatment` — "drug" or "control"
-- `recovered` — 1 if recovered, 0 if not
-- `hospital_id` — hospital where the patient was treated
+Data is stored across three hospital files under `/root/data/`:
+- `hospital_a.csv` — columns: `pid`, `sev_group`, `arm`, `outcome`
+- `hospital_b.csv` — columns: `patient_id`, `severity`, `treatment`, `recovered`
+- `hospital_c.csv` — columns: `ID`, `Severity_Level`, `Treatment_Arm`, `Recovery_Status`
 
-Analyze the data and save your findings to `/root/results.json`:
+All three files record the same information: patient identifier, severity group (mild/moderate/severe), treatment arm (drug/control), and whether the patient recovered.
+
+Note: `Recovery_Status` in hospital_c uses "Yes"/"No" instead of 1/0.
+
+Combine all three datasets and analyze whether the drug improves recovery rates.
+
+Save your findings to `/root/results.json`:
 
 ```json
 {
@@ -19,10 +23,9 @@ Analyze the data and save your findings to `/root/results.json`:
   "moderate_control_recovery_rate": 0.XXXX,
   "severe_drug_recovery_rate": 0.XXXX,
   "severe_control_recovery_rate": 0.XXXX,
+  "total_patients": 0,
   "drug_recommended": true or false
 }
 ```
-
-`drug_recommended` should be `true` if the evidence supports recommending the drug, `false` otherwise.
 
 Round all rates to 4 decimal places.

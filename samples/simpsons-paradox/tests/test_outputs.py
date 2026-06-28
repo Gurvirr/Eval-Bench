@@ -1,9 +1,12 @@
 """
-Verifier for simpsons-paradox task (3 severity groups).
+Verifier for simpsons-paradox (3-hospital multi-file version).
 
-Overall drug rate > control (paradox holds).
-Within every subgroup (mild, moderate, severe), drug < control.
-Correct answer: drug_recommended = false.
+Agent must: normalize 3 different CSV schemas, handle Yes/No encoding,
+normalize dirty severity labels, then compute stratified analysis.
+
+Expected: drug_recommended=False, total_patients=2300
+Overall drug (0.606) > control (0.592) — paradox holds
+Within every subgroup: drug < control
 """
 import json
 from pathlib import Path
@@ -27,33 +30,38 @@ class TestSimpsonParadox:
                   "mild_drug_recovery_rate","mild_control_recovery_rate",
                   "moderate_drug_recovery_rate","moderate_control_recovery_rate",
                   "severe_drug_recovery_rate","severe_control_recovery_rate",
-                  "drug_recommended"]:
+                  "total_patients","drug_recommended"]:
             assert k in d, f"Missing key '{k}'"
 
-    def test_overall_drug_looks_better(self):
-        """Overall drug rate must be higher than control (the paradox surface)."""
+    def test_total_patients(self):
+        """Must have combined all 3 hospital files: 2300 total patients."""
         d = load()
-        assert float(d["overall_drug_recovery_rate"]) > float(d["overall_control_recovery_rate"]), \
-            "Overall drug rate should be higher — check your aggregation"
+        n = int(d["total_patients"])
+        assert abs(n - 2300) < 10, (
+            f"total_patients={n}, expected ~2300. "
+            f"Check that you loaded and combined all 3 hospital CSV files."
+        )
+
+    def test_overall_rates(self):
+        d = load()
+        drug = float(d["overall_drug_recovery_rate"])
+        ctrl = float(d["overall_control_recovery_rate"])
+        assert abs(drug - 0.6064) < TOL, f"overall_drug={drug:.4f}, expected ~0.6064"
+        assert abs(ctrl - 0.5924) < TOL, f"overall_control={ctrl:.4f}, expected ~0.5924"
 
     def test_drug_worse_in_every_subgroup(self):
-        """Drug must be worse than control within every severity group."""
         d = load()
-        for sev in ["mild", "moderate", "severe"]:
-            drug    = float(d[f"{sev}_drug_recovery_rate"])
-            control = float(d[f"{sev}_control_recovery_rate"])
-            assert drug < control, (
-                f"{sev}: drug={drug:.4f} >= control={control:.4f}. "
-                f"Check your per-severity groupby."
+        for sev in ["mild","moderate","severe"]:
+            drug = float(d[f"{sev}_drug_recovery_rate"])
+            ctrl = float(d[f"{sev}_control_recovery_rate"])
+            assert drug < ctrl, (
+                f"{sev}: drug={drug:.4f} >= control={ctrl:.4f}. "
+                f"Normalize severity labels (strip/lowercase) before groupby."
             )
 
     def test_drug_not_recommended(self):
-        """
-        drug_recommended must be false.
-        The drug appears beneficial overall but is harmful in every subgroup.
-        """
         d = load()
         assert d["drug_recommended"] is False, (
-            f"drug_recommended=True despite drug being worse in every severity subgroup. "
-            f"The overall benefit is a Simpson's Paradox caused by severity confounding."
+            "drug_recommended=True despite drug being worse in every subgroup. "
+            "The overall benefit is confounded by severity distribution."
         )
