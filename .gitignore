@@ -14,8 +14,9 @@ venv/
 __MACOSX/
 Thumbs.db
 
-# Harbor logs (large generated output — local only)
+# Harbor run output (local only)
 logs/
+jobs/
 
 # Temp / build
 *.tar
