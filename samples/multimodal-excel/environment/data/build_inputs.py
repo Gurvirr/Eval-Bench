@@ -1,14 +1,15 @@
 """
-Generates weekly_report.xlsx with THREE sections separated by blank rows.
+Generates weekly_report.xlsx with two sheets: Sales and Returns.
 
-Section 1: Regional summary (rows 1-5)
-Section 2: Top products (rows 7-12)
-Section 3: Weekly targets/notes (rows 14-17) — distractor section
+Sheet 1 (Sales): regional gross sales
+Sheet 2 (Returns): returns by region with a different date format
 
-The trap: naive pd.read_excel() merges all three sections.
-A model must identify which section contains which data.
-The third section is a distractor with numeric columns that can be confused
-with the regional or product data.
+Net revenue = gross sales - returns. The trap: an agent that only reads
+the Sales sheet ignores returns and reports inflated gross revenue.
+The correct answer requires reconciling both sheets.
+
+Returns sheet uses "Region" (capitalized) instead of "region" and
+formats values as strings with $ prefix in some rows.
 """
 from openpyxl import Workbook
 from pathlib import Path
@@ -17,33 +18,22 @@ OUT = Path("/root/data")
 OUT.mkdir(parents=True, exist_ok=True)
 
 wb = Workbook()
-ws = wb.active
-ws.title = "Report"
 
-# Section 1: Regional summary
-ws.append(["region", "total_sales", "total_units", "avg_price"])
-ws.append(["North",  45230.50,  312,  145.00])
-ws.append(["South",  38910.75,  287,  135.60])
-ws.append(["East",   52100.00,  401,  129.93])
-ws.append(["West",   29840.25,  198,  150.71])
+# Sheet 1: Sales (gross)
+ws1 = wb.active
+ws1.title = "Sales"
+ws1.append(["region", "gross_sales", "units_sold", "avg_price"])
+ws1.append(["North",  45230.50,  312,  145.00])
+ws1.append(["South",  38910.75,  287,  135.60])
+ws1.append(["East",   52100.00,  401,  129.93])
+ws1.append(["West",   29840.25,  198,  150.71])
 
-ws.append([])  # blank row
-
-# Section 2: Top products
-ws.append(["product_id", "product_name", "units_sold", "revenue"])
-ws.append(["P001", "Wireless Headphones", 89,  13350.00])
-ws.append(["P002", "USB-C Hub",           134,  6700.00])
-ws.append(["P003", "Laptop Stand",        201,  9045.00])
-ws.append(["P004", "Mechanical Keyboard", 76,  11400.00])
-ws.append(["P005", "Webcam HD",           98,   4900.00])
-
-ws.append([])  # blank row
-
-# Section 3: Weekly targets (distractor — different schema, should NOT be used)
-ws.append(["region", "sales_target", "attainment_pct"])
-ws.append(["North",  50000.00,  90.5])
-ws.append(["South",  42000.00,  92.6])
-ws.append(["East",   55000.00,  94.7])
-ws.append(["West",   32000.00,  93.3])
+# Sheet 2: Returns (must be subtracted from gross to get net)
+ws2 = wb.create_sheet("Returns")
+ws2.append(["Region", "return_value", "return_units"])
+ws2.append(["North",   2150.00,  15])
+ws2.append(["South",   1820.50,  13])
+ws2.append(["East",    3100.00,  24])
+ws2.append(["West",     990.75,   7])
 
 wb.save(OUT / "weekly_report.xlsx")

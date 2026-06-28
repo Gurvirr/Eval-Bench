@@ -1,9 +1,11 @@
 You are a data analyst at a healthcare company reviewing a clinical trial.
 
 The file `/root/data/trial.csv` contains results from a randomized trial of a new drug:
-- `severity` — patient severity: "mild", "moderate", or "severe"
+- `patient_id` — unique patient identifier
+- `severity` — patient severity group (mild, moderate, or severe)
 - `treatment` — "drug" or "control"
 - `recovered` — 1 if recovered, 0 if not
+- `hospital_id` — hospital where the patient was treated
 
 Analyze the data and save your findings to `/root/results.json`:
 

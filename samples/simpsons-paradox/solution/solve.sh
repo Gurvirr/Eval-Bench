@@ -8,6 +8,9 @@ from pathlib import Path
 
 df = pd.read_csv("/root/data/trial.csv")
 
+# Normalize severity: strip whitespace, lowercase
+df["severity"] = df["severity"].str.strip().str.lower()
+
 overall  = df.groupby("treatment")["recovered"].mean()
 by_group = df.groupby(["severity","treatment"])["recovered"].mean()
 

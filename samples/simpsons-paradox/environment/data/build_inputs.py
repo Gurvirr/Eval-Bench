@@ -1,15 +1,15 @@
 """
-Generates trial.csv for the simpsons-paradox task (tightened).
+Generates trial.csv for the simpsons-paradox task (messy inputs version).
 
-Three severity groups: mild, moderate, severe.
-- Mild:     drug 40% vs control 50%  -> drug hurts (drug gets fewer)
-- Moderate: drug 55% vs control 65%  -> drug hurts (drug gets moderate share)
-- Severe:   drug 70% vs control 80%  -> drug hurts (drug gets most)
-- Overall:  drug looks better due to confounding with severity
+The severity column has inconsistent casing and whitespace:
+"Mild", "mild", "MILD", "mild ", "Moderate", "moderate", "MODERATE", etc.
 
-The tightening: three groups instead of two makes the correct
-stratified analysis less obvious. The model must check ALL subgroups,
-not just split into two.
+A naive groupby without normalization splits "mild" and "Mild" into separate
+groups, giving wrong rates and potentially missing the paradox entirely.
+
+The paradox still holds after correct normalization:
+- Overall: drug better
+- Within each severity: drug worse
 """
 import numpy as np
 import pandas as pd
@@ -32,11 +32,20 @@ for _ in range(150): rows.append({"severity":"severe",   "treatment":"control", 
 
 df = pd.DataFrame(rows).sample(frac=1, random_state=42).reset_index(drop=True)
 
-# Verify paradox holds
-overall = df.groupby("treatment")["recovered"].mean()
-by_group = df.groupby(["severity","treatment"])["recovered"].mean()
-assert overall["drug"] > overall["control"], "Paradox broken: drug should look better overall"
-for sev in ["mild","moderate","severe"]:
-    assert by_group[sev,"drug"] < by_group[sev,"control"], f"Paradox broken in {sev}"
+# Inject dirty severity labels — inconsistent casing and whitespace
+dirty_map = {
+    "mild":     ["mild", "Mild", "MILD", "mild "],
+    "moderate": ["moderate", "Moderate", "MODERATE", "moderate "],
+    "severe":   ["severe", "Severe", "SEVERE", "severe "],
+}
+def dirty(val):
+    choices = dirty_map[val]
+    return RNG.choice(choices)
+
+df["severity"] = df["severity"].apply(dirty)
+
+# Also add a hospital_id column (red herring — looks like a confounder)
+df.insert(0, "patient_id", range(1, len(df)+1))
+df["hospital_id"] = RNG.integers(1, 6, len(df))  # 5 hospitals, not actually a confounder
 
 df.to_csv(OUT / "trial.csv", index=False)

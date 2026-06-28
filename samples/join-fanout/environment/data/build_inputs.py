@@ -1,13 +1,14 @@
 """
-Generates orders.csv and customer_tags.csv for the join-fanout task.
+Generates orders split across 3 monthly files + customer_tags.csv.
 
-The trap: customers can have multiple tags (M:N relationship between orders
-and tags). A naive merge(orders, tags) then sum(revenue) inflates the total
-by ~1.8x because orders are duplicated for each tag a customer has.
+The fanout trap is now harder to spot:
+- orders are in orders_jan.csv, orders_feb.csv, orders_mar.csv
+- Must concatenate all three before computing metrics
+- customer_tags.csv has the same M:N structure (customers with multiple tags)
 
-Correct approach: filter premium customer IDs first, then sum their orders.
-- Correct total revenue from premium customers: computed from orders only
-- Naive (join-first) total: ~1.8x inflated
+A model that joins tags to orders before concatenating, or that joins
+the concatenated orders with all tags and sums without deduplication,
+inflates the overall_total_revenue by ~1.8x.
 """
 import numpy as np
 import pandas as pd
@@ -17,18 +18,29 @@ RNG = np.random.default_rng(42)
 OUT = Path("/root/data")
 OUT.mkdir(parents=True, exist_ok=True)
 
-orders = pd.DataFrame({
-    "order_id":    range(1, 101),
-    "customer_id": RNG.integers(1, 41, 100),
-    "revenue":     RNG.integers(10, 200, 100).astype(float),
-})
+# Generate 100 orders split across 3 months
+n_per_month = [34, 33, 33]
+months = ["jan", "feb", "mar"]
+all_orders = []
+order_id = 1
+for n, month in zip(n_per_month, months):
+    df = pd.DataFrame({
+        "order_id":    range(order_id, order_id + n),
+        "customer_id": RNG.integers(1, 41, n),
+        "revenue":     RNG.integers(10, 200, n).astype(float),
+        "month":       month,
+    })
+    df.to_csv(OUT / f"orders_{month}.csv", index=False)
+    all_orders.append(df)
+    order_id += n
 
+orders = pd.concat(all_orders, ignore_index=True)
+
+# Customer tags: M:N (same as before)
 tags = []
 for cid in range(1, 41):
     n_tags = RNG.integers(1, 4)
-    for tag in RNG.choice(["premium", "newsletter", "loyalty", "trial"], n_tags, replace=False):
+    for tag in RNG.choice(["premium","newsletter","loyalty","trial"], n_tags, replace=False):
         tags.append({"customer_id": int(cid), "tag": tag})
 tags_df = pd.DataFrame(tags)
-
-orders.to_csv(OUT / "orders.csv", index=False)
 tags_df.to_csv(OUT / "customer_tags.csv", index=False)

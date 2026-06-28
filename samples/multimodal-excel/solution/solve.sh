@@ -6,20 +6,24 @@ import json
 import pandas as pd
 from pathlib import Path
 
-# Section 1: 4 data rows starting at row 0 (header), nrows=4
-regions = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Report",
-                        header=0, nrows=4)
+sales   = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Sales")
+returns = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Returns")
 
-# Section 2: starts at row 6 (0-indexed), skip 6 rows to reach it
-products = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Report",
-                         header=0, skiprows=6, nrows=5)
+# Normalize region column name
+returns = returns.rename(columns={"Region": "region"})
+
+merged = sales.merge(returns, on="region")
+merged["net_sales"] = merged["gross_sales"] - merged["return_value"]
+merged["net_units"] = merged["units_sold"]  - merged["return_units"]
 
 result = {
-    "grand_total_sales":       round(float(regions["total_sales"].sum()), 2),
-    "best_region_by_sales":    str(regions.loc[regions["total_sales"].idxmax(), "region"]),
-    "top_product_by_revenue":  str(products.loc[products["revenue"].idxmax(), "product_name"]),
-    "avg_price_north_region":  round(float(regions.loc[regions["region"] == "North", "avg_price"].iloc[0]), 2),
-    "total_units_all_regions": int(regions["total_units"].sum()),
+    "grand_total_net_sales":    round(float(merged["net_sales"].sum()), 2),
+    "best_region_by_net_sales": str(merged.loc[merged["net_sales"].idxmax(), "region"]),
+    "north_net_sales":          round(float(merged.loc[merged["region"]=="North", "net_sales"].iloc[0]), 2),
+    "south_net_sales":          round(float(merged.loc[merged["region"]=="South", "net_sales"].iloc[0]), 2),
+    "east_net_sales":           round(float(merged.loc[merged["region"]=="East",  "net_sales"].iloc[0]), 2),
+    "west_net_sales":           round(float(merged.loc[merged["region"]=="West",  "net_sales"].iloc[0]), 2),
+    "total_net_units":          int(merged["net_units"].sum()),
 }
 Path("/root/results.json").write_text(json.dumps(result))
 print(json.dumps(result, indent=2))

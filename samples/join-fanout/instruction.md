@@ -1,10 +1,10 @@
 You are a data analyst at an e-commerce company.
 
-You have two files under `/root/data/`:
-- `orders.csv` — one row per order: `order_id`, `customer_id`, `revenue`
+You have the following files under `/root/data/`:
+- `orders_jan.csv`, `orders_feb.csv`, `orders_mar.csv` — monthly order records: `order_id`, `customer_id`, `revenue`, `month`
 - `customer_tags.csv` — marketing segment data: `customer_id`, `tag`
 
-Compute the following metrics and save to `/root/results.json`:
+Compute the following metrics across all three months combined and save to `/root/results.json`:
 
 ```json
 {
@@ -25,8 +25,8 @@ Compute the following metrics and save to `/root/results.json`:
 }
 ```
 
-- `overall_total_revenue`: total revenue across all orders
-- `overall_n_orders`: total number of orders
+- `overall_total_revenue`: total revenue across all orders (all months)
+- `overall_n_orders`: total number of orders (all months)
 - `revenue_by_tag` / `orders_by_tag`: revenue and order count for customers who have each tag
 
 Round revenue values to 2 decimal places.
