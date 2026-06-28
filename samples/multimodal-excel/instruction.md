@@ -1,6 +1,6 @@
 You are a data analyst at a retail company. A colleague has sent you a weekly sales report.
 
-The file `/root/data/weekly_report.xlsx` contains a single sheet named `Report`.
+The file `/root/data/weekly_report.xlsx` contains sales data for the week.
 
 Compute the following and save to `/root/results.json`:
 
@@ -14,10 +14,10 @@ Compute the following and save to `/root/results.json`:
 }
 ```
 
-- `grand_total_sales`: sum of `total_sales` across all regions
-- `best_region_by_sales`: name of the region with highest `total_sales`
-- `top_product_by_revenue`: `product_name` of the product with highest `revenue`
-- `avg_price_north_region`: `avg_price` for the North region
-- `total_units_all_regions`: sum of `total_units` across all regions
+- `grand_total_sales`: total sales across all regions
+- `best_region_by_sales`: region with the highest total sales
+- `top_product_by_revenue`: product name with highest revenue
+- `avg_price_north_region`: average price in the North region
+- `total_units_all_regions`: total units sold across all regions
 
 Round monetary values to 2 decimal places.

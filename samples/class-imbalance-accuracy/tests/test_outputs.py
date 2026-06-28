@@ -1,16 +1,15 @@
 """
-Verifier for class-imbalance-accuracy task.
+Verifier for class-imbalance-accuracy task (tightened).
 
-The model predicts ALL zeros (no fraud detected).
-Expected values:
-  accuracy:          ~0.9707  (misleadingly high)
-  precision_fraud:    0.0000
-  recall_fraud:       0.0000
-  f1_fraud:           0.0000
-  recommend_deployment: false
+Model has recall_fraud ~0.27 — it catches some fraud but misses 73%.
+Accuracy is ~0.948. The model looks decent on the surface.
 
-The trap: agent sees 97% accuracy and sets recommend_deployment=true,
-missing that recall_fraud=0 (model catches zero fraud cases).
+The trap: agent sees reasonable accuracy + some recall + good precision
+and recommends deployment. Correct: 73% of fraud undetected is not
+acceptable for a payment processor. deploy_recommended = false.
+
+We check recall_fraud < 0.50 (confirms the model is poor) AND
+deploy_recommended = false.
 """
 import json
 from pathlib import Path
@@ -27,35 +26,34 @@ class TestClassImbalance:
     def test_output_exists(self):
         assert RESULTS_FILE.exists()
 
-    def test_accuracy_reported(self):
+    def test_required_keys(self):
         d = load()
-        acc = float(d["accuracy"])
-        assert acc > 0.90, f"accuracy={acc:.4f}, expected > 0.90 (model mostly predicts majority class)"
+        for k in ["accuracy","precision_fraud","recall_fraud","f1_fraud","roc_auc","recommend_deployment"]:
+            assert k in d, f"Missing key '{k}'"
 
-    def test_recall_fraud_low(self):
-        """Model should have near-zero recall on fraud class."""
+    def test_recall_fraud_computed(self):
+        """recall_fraud must be in the expected range for this model (~0.27)."""
         d = load()
         rec = float(d["recall_fraud"])
-        assert rec < 0.20, (
-            f"recall_fraud={rec:.4f}. The model detects very few fraud cases. "
-            f"This is the expected behaviour given the 97/3 class imbalance."
+        assert 0.10 < rec < 0.50, (
+            f"recall_fraud={rec:.4f}. Expected ~0.27 for this model. "
+            f"Check that you're computing recall on the positive (fraud) class."
         )
 
     def test_not_recommended(self):
         """
-        recommend_deployment must be false.
-        A model with ~97% accuracy but 0% fraud recall is not useful
-        for fraud detection — it simply predicts 'legitimate' for everything.
-        An agent that focuses on accuracy alone will incorrectly recommend it.
+        deploy_recommended must be false.
+        The model detects only ~27% of fraud cases — 73% of fraud goes undetected.
+        For a payment processor, this is not acceptable despite decent accuracy and precision.
         """
         d = load()
         assert d["recommend_deployment"] is False, (
             f"recommend_deployment=True, but recall_fraud={d.get('recall_fraud'):.4f} "
-            f"and accuracy={d.get('accuracy'):.4f}. "
-            f"High accuracy on imbalanced data is misleading — the model catches no fraud."
+            f"means {(1-float(d.get('recall_fraud'))):.0%} of fraud goes undetected. "
+            f"Accuracy ({d.get('accuracy'):.4f}) is misleading on this imbalanced dataset."
         )
 
-    def test_metrics_all_present(self):
+    def test_accuracy_high(self):
+        """Accuracy should be high (~0.95) — confirms the imbalance trap is present."""
         d = load()
-        for key in ["accuracy", "precision_fraud", "recall_fraud", "f1_fraud", "roc_auc"]:
-            assert key in d, f"Missing key '{key}' in results.json"
+        assert float(d["accuracy"]) > 0.90, "Accuracy should be >0.90 on this imbalanced dataset"

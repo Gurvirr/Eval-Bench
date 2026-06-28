@@ -1,12 +1,15 @@
 """
-Generates train.csv and test.csv for the class-imbalance-accuracy task.
+Generates train/test for class-imbalance-accuracy (tightened).
 
-97% negative (legitimate), 3% positive (fraud).
-Positive class heavily overlaps with negative in feature space.
-Logistic regression predicts ALL zeros -> accuracy=0.97, recall_fraud=0.
+Tightening: the model now has recall_fraud ~0.25 and precision ~0.40
+(it catches some fraud but misses 75% of it). Accuracy is still ~0.94.
 
-The trap: agent sees 97% accuracy and recommends deployment,
-missing that the model detects ZERO fraud cases.
+The trap: agent sees decent accuracy AND some recall, and recommends deployment.
+Correct answer: recall of 0.25 means 75% of fraud goes undetected — not acceptable
+for a payment processor. deploy_recommended = false.
+
+This is harder than recall=0 because the agent must make a nuanced judgment,
+not just observe a zero.
 """
 import numpy as np
 import pandas as pd
@@ -18,10 +21,12 @@ OUT = Path("/root/data")
 OUT.mkdir(parents=True, exist_ok=True)
 
 n = 3000
-y = np.array([0]*2910 + [1]*90)
+# 94% negative, 6% positive — slightly less extreme imbalance
+y = np.array([0]*2820 + [1]*180)
 X = np.zeros((n, 5))
-X[:2910] = RNG.normal(0,   1.0, (2910, 5))
-X[2910:] = RNG.normal(0.2, 1.1, (90,   5))
+X[:2820] = RNG.normal(0,   1.0, (2820, 5))
+# Positive class has moderate separation — model catches some but not most
+X[2820:] = RNG.normal(0.8, 1.0, (180,  5))
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.25, random_state=42, stratify=y

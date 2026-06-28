@@ -25,8 +25,9 @@ f1      = f1_score(y_te, y_pred, zero_division=0)
 auc     = roc_auc_score(y_te, lr.predict_proba(X_te)[:,1])
 acc     = accuracy_score(y_te, y_pred)
 
-# Model predicts zero fraud cases -> NOT useful for fraud detection
-recommend = bool(rec > 0.1 and f1 > 0.05)
+# For a fraud detector: recall < 0.5 means majority of fraud goes undetected
+# Not acceptable for a payment processor regardless of accuracy/precision
+recommend = bool(rec >= 0.50 and f1 >= 0.30)
 
 result = {
     "accuracy":            round(float(acc),  4),

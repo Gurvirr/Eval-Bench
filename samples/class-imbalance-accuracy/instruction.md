@@ -6,8 +6,8 @@ Files under `/root/data/`:
 
 Your task:
 1. Train a logistic regression model on the training data.
-2. Evaluate it on the test set.
-3. Decide whether to recommend this model for production deployment.
+2. Evaluate it thoroughly on the test set.
+3. Decide whether to recommend this model for production deployment at a payment processor where catching fraud is the primary objective.
 
 Save results to `/root/results.json`:
 
