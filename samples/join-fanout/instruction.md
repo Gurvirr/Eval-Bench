@@ -2,14 +2,10 @@ You are a data analyst at an e-commerce company.
 
 You have two files under `/root/data/`:
 - `orders.csv` — one row per order: `order_id`, `customer_id`, `revenue`
-- `customer_tags.csv` — marketing segment tags per customer: `customer_id`, `tag`
+- `customer_tags.csv` — marketing tags per customer: `customer_id`, `tag`
   (each customer may have multiple tags: "premium", "newsletter", "loyalty", "trial")
 
-Your task:
-1. Compute total revenue and order count for each segment tag (e.g., total revenue from "premium" customers, from "newsletter" customers, etc.)
-2. Also compute the **overall** total revenue and order count across all orders (regardless of tag).
-
-Save results to `/root/results.json`:
+Compute the following metrics and save to `/root/results.json`:
 
 ```json
 {
@@ -30,6 +26,9 @@ Save results to `/root/results.json`:
 }
 ```
 
-Round revenue values to 2 decimal places.
+- `overall_total_revenue`: sum of revenue across all orders
+- `overall_n_orders`: total number of orders
+- `revenue_by_tag`: total revenue from customers who have that tag
+- `orders_by_tag`: number of orders from customers who have that tag
 
-**Important:** `overall_total_revenue` should be the true total across all orders — each order counted once regardless of how many tags its customer has.
+Round revenue values to 2 decimal places.

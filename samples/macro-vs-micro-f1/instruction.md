@@ -1,19 +1,19 @@
-You are a data scientist evaluating a multi-class text classifier for a content moderation system.
+You are a data scientist evaluating a multi-class content moderation classifier.
 
-The model must classify content into 4 categories:
-- `0` — safe (majority class)
+The model classifies content into 4 categories:
+- `0` — safe
 - `1` — spam
 - `2` — harassment
-- `3` — hate speech (rare but critical to detect)
+- `3` — hate speech
 
 Files under `/root/data/`:
-- `train.csv` — training set with columns `feature_0` through `feature_5` and `label`
-- `test.csv`  — test set, same schema
+- `train.csv` — features `feature_0` through `feature_5` and `label`
+- `test.csv`  — same schema
 
 Your task:
 1. Train a logistic regression classifier on the training data.
 2. Evaluate on the test set.
-3. Report the **macro-averaged F1 score** — this is the correct metric for imbalanced multiclass problems where each class must be treated equally regardless of size.
+3. Report the appropriate F1 score for this problem, along with accuracy.
 
 Save results to `/root/results.json`:
 
@@ -26,5 +26,3 @@ Save results to `/root/results.json`:
 ```
 
 Round all values to 4 decimal places.
-
-**Important:** the primary metric for this system is `f1_macro` (macro-averaged F1), not accuracy or weighted F1. The system must perform well on minority classes (harassment, hate speech), not just on the dominant "safe" category.

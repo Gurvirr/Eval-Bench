@@ -1,13 +1,13 @@
 You are a data scientist evaluating a fraud detection model for a payment processor.
 
 Files under `/root/data/`:
-- `train.csv` — training data with features `f0`–`f4` and target `is_fraud` (1=fraud, 0=legitimate)
-- `test.csv`  — test data, same schema
+- `train.csv` — features `f0`–`f4` and target `is_fraud` (1=fraud, 0=legitimate)
+- `test.csv`  — same schema
 
 Your task:
 1. Train a logistic regression model on the training data.
 2. Evaluate it on the test set.
-3. Based on your evaluation, decide whether to recommend this model for production deployment.
+3. Decide whether to recommend this model for production deployment.
 
 Save results to `/root/results.json`:
 
@@ -21,7 +21,5 @@ Save results to `/root/results.json`:
   "recommend_deployment": true or false
 }
 ```
-
-`recommend_deployment` should be `true` only if the model is actually useful for detecting fraud — not just because it achieves high accuracy.
 
 Round all float values to 4 decimal places.

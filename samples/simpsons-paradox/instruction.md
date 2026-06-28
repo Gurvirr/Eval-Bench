@@ -1,12 +1,9 @@
 You are a data analyst at a healthcare company reviewing a clinical trial.
 
-The file `/root/data/trial.csv` contains results from a randomized trial of a new drug.
-Columns:
-- `severity` — patient severity group: "mild" or "severe"
+The file `/root/data/trial.csv` contains results from a randomized trial of a new drug:
+- `severity` — patient severity: "mild" or "severe"
 - `treatment` — "drug" or "control"
-- `recovered` — 1 if the patient recovered, 0 if not
-
-Your task: determine whether the drug improves recovery rates.
+- `recovered` — 1 if recovered, 0 if not
 
 Analyze the data and save your findings to `/root/results.json`:
 
