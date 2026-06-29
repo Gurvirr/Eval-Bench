@@ -1,18 +1,15 @@
 """
-Generates 3 hospital CSV files for the simpsons-paradox task.
+Generates trial.csv and patient_metadata.csv for simpsons-paradox.
 
-hospital_a.csv — columns: pid, sev_group, arm, outcome
-hospital_b.csv — columns: patient_id, severity, treatment, recovered
-hospital_c.csv — columns: ID, Severity_Level, Treatment_Arm, Recovery_Status
+trial.csv has: patient_id, treatment, recovered (NO severity column)
+patient_metadata.csv has: patient_id, age, hospital_id, severity_group
 
-The agent must:
-1. Normalize all 3 files to the same schema
-2. Concatenate into one dataset
-3. Normalize severity labels (dirty casing/whitespace)
-4. Compute stratified analysis
+The agent must join the two files to get severity for stratification.
+Without the join, the agent can only compute overall rates and will
+miss the paradox (drug looks beneficial overall, hurts in every subgroup).
 
-Without correct normalization, the groupby produces wrong rates.
-Without noticing the paradox, the wrong recommendation is made.
+The hospital_id and age columns are distractors — they are NOT confounders.
+Only severity_group is the true confounder.
 """
 import numpy as np
 import pandas as pd
@@ -22,39 +19,31 @@ RNG = np.random.default_rng(42)
 OUT = Path("/root/data")
 OUT.mkdir(parents=True, exist_ok=True)
 
-def make_patients(n_mild_drug, n_mild_ctrl, n_mod_drug, n_mod_ctrl, n_sev_drug, n_sev_ctrl, rng):
-    rows = []
-    for n, sev, arm, rate in [
-        (n_mild_drug, "mild",     "drug",    0.40),
-        (n_mild_ctrl, "mild",     "control", 0.50),
-        (n_mod_drug,  "moderate", "drug",    0.55),
-        (n_mod_ctrl,  "moderate", "control", 0.65),
-        (n_sev_drug,  "severe",   "drug",    0.70),
-        (n_sev_ctrl,  "severe",   "control", 0.80),
-    ]:
-        for _ in range(n):
-            rows.append({"severity": sev, "treatment": arm,
-                         "recovered": int(rng.random() < rate)})
-    return pd.DataFrame(rows).sample(frac=1, random_state=42).reset_index(drop=True)
+rows = []
+for n, sev, arm, rate in [
+    (150, "mild",     "drug",    0.40),
+    (600, "mild",     "control", 0.50),
+    (400, "moderate", "drug",    0.55),
+    (300, "moderate", "control", 0.65),
+    (700, "severe",   "drug",    0.70),
+    (150, "severe",   "control", 0.80),
+]:
+    for _ in range(n):
+        rows.append({"severity": sev, "treatment": arm,
+                     "recovered": int(RNG.random() < rate)})
 
-# Hospital A — small, uses abbreviated column names
-df_a = make_patients(50, 200, 130, 100, 230, 50, RNG)
-dirty = {"mild": ["mild","Mild","MILD"], "moderate": ["moderate","Moderate","MODERATE"], "severe": ["severe","Severe","SEVERE"]}
-df_a["severity"] = df_a["severity"].apply(lambda x: RNG.choice(dirty[x]))
-df_a = df_a.rename(columns={"severity":"sev_group","treatment":"arm","recovered":"outcome"})
-df_a.insert(0, "pid", range(1, len(df_a)+1))
-df_a.to_csv(OUT / "hospital_a.csv", index=False)
+df = pd.DataFrame(rows).sample(frac=1, random_state=42).reset_index(drop=True)
+df.insert(0, "patient_id", range(1, len(df)+1))
 
-# Hospital B — medium, standard names but severity has trailing spaces
-df_b = make_patients(60, 250, 150, 120, 280, 60, RNG)
-df_b["severity"] = df_b["severity"].apply(lambda x: x + (" " if RNG.random() < 0.3 else ""))
-df_b.insert(0, "patient_id", range(1001, 1001+len(df_b)))
-df_b.to_csv(OUT / "hospital_b.csv", index=False)
+# trial.csv — no severity column
+trial = df[["patient_id", "treatment", "recovered"]]
+trial.to_csv(OUT / "trial.csv", index=False)
 
-# Hospital C — large, capitalized column names, Recovery_Status is "Yes"/"No" not 1/0
-df_c = make_patients(40, 150, 120, 80, 190, 40, RNG)
-df_c["severity"] = df_c["severity"].str.title()  # "Mild", "Moderate", "Severe"
-df_c["recovered"] = df_c["recovered"].map({1:"Yes", 0:"No"})
-df_c = df_c.rename(columns={"severity":"Severity_Level","treatment":"Treatment_Arm","recovered":"Recovery_Status"})
-df_c.insert(0, "ID", range(2001, 2001+len(df_c)))
-df_c.to_csv(OUT / "hospital_c.csv", index=False)
+# patient_metadata.csv — severity + distractors
+meta = pd.DataFrame({
+    "patient_id":     df["patient_id"],
+    "severity_group": df["severity"],
+    "age":            RNG.integers(25, 80, len(df)),
+    "hospital_id":    RNG.integers(1, 6, len(df)),
+})
+meta.to_csv(OUT / "patient_metadata.csv", index=False)

@@ -1,17 +1,10 @@
-You are a data analyst reviewing a multi-site clinical trial of a new drug.
+You are a data analyst at a healthcare company reviewing a clinical trial.
 
-Data is stored across three hospital files under `/root/data/`:
-- `hospital_a.csv` — columns: `pid`, `sev_group`, `arm`, `outcome`
-- `hospital_b.csv` — columns: `patient_id`, `severity`, `treatment`, `recovered`
-- `hospital_c.csv` — columns: `ID`, `Severity_Level`, `Treatment_Arm`, `Recovery_Status`
+Files under `/root/data/`:
+- `trial.csv` — trial results: `patient_id`, `treatment` (drug/control), `recovered` (1/0)
+- `patient_metadata.csv` — patient info: `patient_id`, `severity_group`, `age`, `hospital_id`
 
-All three files record the same information: patient identifier, severity group (mild/moderate/severe), treatment arm (drug/control), and whether the patient recovered.
-
-Note: `Recovery_Status` in hospital_c uses "Yes"/"No" instead of 1/0.
-
-Combine all three datasets and analyze whether the drug improves recovery rates.
-
-Save your findings to `/root/results.json`:
+Analyze whether the drug improves recovery rates and save to `/root/results.json`:
 
 ```json
 {
@@ -23,7 +16,6 @@ Save your findings to `/root/results.json`:
   "moderate_control_recovery_rate": 0.XXXX,
   "severe_drug_recovery_rate": 0.XXXX,
   "severe_control_recovery_rate": 0.XXXX,
-  "total_patients": 0,
   "drug_recommended": true or false
 }
 ```
