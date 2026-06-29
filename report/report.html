@@ -45,7 +45,7 @@
 
 <h2>1. Distribution</h2>
 
-<p>The benchmark targets one failure class: tasks where the model uses data that would not have been available at prediction time. Every task isolates a specific instance of this — target leakage in its various forms.</p>
+<p>The benchmark targets one failure class: tasks where the model uses data that would not have been available at prediction time. Every task isolates a specific instance of this  -  target leakage in its various forms.</p>
 
 <p>We piloted 14 tasks across different failure modes. The curation process revealed something concrete: gemini-3.5-flash handles documented methodology errors reliably (Bonferroni correction, macro F1, join deduplication, Simpson's paradox). It fails on leakage reasoning. That narrowed the benchmark to 7 tasks that actually provide signal.</p>
 
@@ -123,50 +123,50 @@
 </table>
 
 <div class="box">
-<strong>The pattern:</strong> gemini-3.5-flash reliably applies documented DS best practices. It fails when it must decide whether a feature is valid at prediction time — reasoning that is not documented in any textbook and is not prompted by the task description.
+<strong>The pattern:</strong> gemini-3.5-flash reliably applies documented DS best practices. It fails when it must decide whether a feature is valid at prediction time  -  reasoning that is not documented in any textbook and is not prompted by the task description.
 </div>
 
 <h3>Difficulty curve</h3>
-<p>The distribution is bimodal. Three tasks fail 100% of the time. One fails 67%. Three pass at 84-97%. There is no gradual slope. Tasks either hit the leakage reasoning gap or the model handles them correctly. The passing tasks are not easier versions of the failing tasks — they test a different thing entirely.</p>
+<p>The distribution is bimodal. Three tasks fail 100% of the time. One fails 67%. Three pass at 84-97%. There is no gradual slope. Tasks either hit the leakage reasoning gap or the model handles them correctly. The passing tasks are not easier versions of the failing tasks  -  they test a different thing entirely.</p>
 
 <h2>3. Research Awareness</h2>
 
 <table>
   <tr><th>Source</th><th>Key finding</th><th>Influenced</th></tr>
   <tr>
-    <td><strong>DSBench</strong><br>arXiv:2409.07703, ICLR 2025</td>
+    <td><strong><a href="https://arxiv.org/abs/2409.07703" target="_blank">DSBench</a></strong><br>arXiv:2409.07703, ICLR 2025</td>
     <td>Best agent achieves 34% on 466 real data analysis tasks. Top error: "inadequate data identification" where the model picks the wrong columns.</td>
     <td>Leakage task family</td>
   </tr>
   <tr>
-    <td><strong>DA-Code</strong><br>arXiv:2410.07331, EMNLP 2024</td>
+    <td><strong><a href="https://arxiv.org/abs/2410.07331" target="_blank">DA-Code</a></strong><br>arXiv:2410.07331, EMNLP 2024</td>
     <td>GPT-4 at 30.5%; data wrangling is hardest (30.4% vs 48.4% for ML). Agents hallucinate file structures.</td>
     <td>multimodal-excel, pdf-invoice-reconciliation</td>
   </tr>
   <tr>
-    <td><strong>DABStep</strong><br>arXiv:2506.23719, Adyen+HF 2025</td>
+    <td><strong><a href="https://arxiv.org/abs/2506.23719" target="_blank">DABStep</a></strong><br>arXiv:2506.23719, Adyen+HF 2025</td>
     <td>o3-mini at 16% on hard payment analytics tasks requiring cross-referencing structured data with unstructured documentation.</td>
     <td>payment-fee-audit (4-rule structure)</td>
   </tr>
   <tr>
-    <td><strong>MLE-Bench</strong><br>arXiv:2410.07095, ICLR 2025</td>
+    <td><strong><a href="https://arxiv.org/abs/2410.07095" target="_blank">MLE-Bench</a></strong><br>arXiv:2410.07095, ICLR 2025</td>
     <td>Best agent achieves 16.9% Kaggle bronze rate. Failures include feature leakage and wrong train/test splits.</td>
     <td>leakage-imputation, timeseries-lookahead</td>
   </tr>
   <tr>
-    <td><strong>CausalPitfalls</strong><br>arXiv:2505.13770, May 2025</td>
+    <td><strong><a href="https://arxiv.org/abs/2505.13770" target="_blank">CausalPitfalls</a></strong><br>arXiv:2505.13770, May 2025</td>
     <td>GPT-4o, Claude 3.5, Gemini all fail when data contradicts prior knowledge; rely on semantics over evidence.</td>
     <td>Curation rationale (dropped simpsons-paradox)</td>
   </tr>
   <tr>
-    <td><strong>RewardHackingAgents</strong><br>arXiv:2603.11337, 2026</td>
+    <td><strong><a href="https://arxiv.org/abs/2603.11337" target="_blank">RewardHackingAgents</a></strong><br>arXiv:2603.11337, 2026</td>
     <td>~50% of natural agent episodes attempt evaluator tampering in mutable workspaces; agents access test labels during training.</td>
     <td>Leakage task framing</td>
   </tr>
 </table>
 
 <h3>What the literature told us to build</h3>
-<p>DABStep's 16% pass rate comes from requiring cross-referencing multiple documents with domain knowledge — that shaped payment-fee-audit and pdf-invoice-reconciliation. MLE-Bench named feature leakage as a top failure type — that led to the three leakage tasks. DA-Code's finding that data wrangling is harder than ML shaped multimodal-excel.</p>
+<p>DABStep's 16% pass rate comes from requiring cross-referencing multiple documents with domain knowledge. That shaped payment-fee-audit and pdf-invoice-reconciliation. MLE-Bench named feature leakage as a top failure type, which led to the three leakage tasks. DA-Code's finding that data wrangling is harder than ML shaped multimodal-excel.</p>
 
 <p>CausalPitfalls showed models fail on causal reasoning when data contradicts prior knowledge, but curation showed gemini-3.5-flash handles the clean versions (Simpson's paradox, Bonferroni). Those tasks were dropped. The model knows these techniques from training data.</p>
 
@@ -182,7 +182,7 @@
 
 <h3>Public data sources</h3>
 <ul>
-  <li>Kaggle datasets for supervised learning tasks — many have documented leakage traps in public notebooks</li>
+  <li>Kaggle datasets for supervised learning tasks  -  many have documented leakage traps in public notebooks</li>
   <li>Visa/Mastercard/Amex public interchange fee schedules for payment analytics tasks</li>
   <li>DABStep's open Adyen dataset for payment domain tasks</li>
   <li>UCI ML Repository for tabular classification/regression problems</li>
@@ -194,7 +194,7 @@
 
 <h3>Verifier design</h3>
 <p>All tasks in this benchmark use deterministic binary verifiers: pytest checks exact field values and the verifier writes 0 or 1 to reward.txt. This was the right choice here because every task has a precise ground truth (either the model used the leaking feature or it did not; either the fee total matches or it does not).</p>
-<p>An LLM-as-judge verifier would be appropriate for tasks requiring open-ended reasoning where the correct answer is not a single number — for example, "explain why this model is not deployment-ready" or "identify all risks in this dataset." For the leakage tasks specifically, a judge would be worse: it could be fooled by confident-sounding but wrong explanations. Deterministic checks on the feature name and AUC bound are more reliable.</p>
+<p>An LLM-as-judge verifier would be appropriate for tasks requiring open-ended reasoning where the correct answer is not a single number  -  for example, "explain why this model is not deployment-ready" or "identify all risks in this dataset." For the leakage tasks specifically, a judge would be worse: it could be fooled by confident-sounding but wrong explanations. Deterministic checks on the feature name and AUC bound are more reliable.</p>
 
 <h3>QA loop</h3>
 <p>Each generated task goes through an automated pipeline before admission:</p>
@@ -205,7 +205,16 @@
 </ol>
 <p>Tasks that fail step 3 are either discarded or flagged for manual review. The target is a 30-40% admission rate from generated candidates to final benchmark. This keeps calibration without requiring manual review of every task.</p>
 
-<h3>Automated loops used in this project</h3>
+<h3>AI agent loops used in this project</h3>
+<p>The task design and evaluation pipeline was run as a series of AI-assisted iteration loops using Kiro (Claude):</p>
+<ul>
+  <li><strong>Task generation loop:</strong> described each task's failure mode and data structure to the AI, which generated build_inputs.py, solution/solve.sh, and test_outputs.py. Reviewed the output, ran oracle/nop checks, fed errors back to the agent, and iterated until oracle=1 and nop=0. Each task took 2-4 iterations.</li>
+  <li><strong>Difficulty calibration loop:</strong> ran a task against gemini-3.5-flash, pasted the passing trajectory back to the agent with "the model solved this, here's how, make it harder." The agent redesigned the data or instruction. Repeated until consistent failures. This loop identified that the model passes methodology traps but fails on information validity questions.</li>
+  <li><strong>Literature scan loop:</strong> gave the agent a list of benchmark papers and asked it to identify which failure modes had the strongest evidence for headroom below 30%. The output directly shaped which tasks to build and which to drop.</li>
+  <li><strong>Failure classification loop:</strong> fed trajectory.json files from failed runs to the agent and asked it to classify the failure type (took the leaking feature, wrong rolling syntax, etc.) and extract the relevant excerpt. Used directly in section 5.</li>
+</ul>
+
+<h3>Scripted automation loops</h3>
 <ul>
   <li><code>scripts/qa_all.sh</code>: oracle+nop validation on all tasks in one command</li>
   <li><code>scripts/run_model.bat</code>: runs all tasks against the model, configurable trial count</li>
@@ -219,7 +228,7 @@
 
 <h3>leakage-imputation: the model uses a post-default feature to predict defaults</h3>
 
-<p>The dataset contains these columns: <code>loan_id</code>, <code>credit_score</code>, <code>income</code>, <code>loan_amount</code>, <code>months_employed</code>, <code>interest_rate</code>, <code>days_past_due</code>, <code>defaulted</code>. The column <code>days_past_due</code> represents collection activity after a loan defaults — it is zero for non-defaulters and positive for defaulters. It is not available when a loan origination decision needs to be made.</p>
+<p>The dataset contains these columns: <code>loan_id</code>, <code>credit_score</code>, <code>income</code>, <code>loan_amount</code>, <code>months_employed</code>, <code>interest_rate</code>, <code>days_past_due</code>, <code>defaulted</code>. The column <code>days_past_due</code> represents collection activity after a loan defaults. It is zero for non-defaulters and positive for defaulters. It is not available when a loan origination decision needs to be made.</p>
 
 <p>From the failed trajectory, the model's reasoning at the critical moment:</p>
 
@@ -240,11 +249,11 @@ and `loan_id` to train a logistic regression model.</pre>
 
 <h3>timeseries-lookahead</h3>
 
-<p>The correct rolling mean is <code>df["sales"].shift(1).rolling(7).mean()</code> — look back only. The model writes:</p>
+<p>The correct rolling mean is <code>df["sales"].shift(1).rolling(7).mean()</code>. Look back only. The model writes:</p>
 
 <pre>Plan: df["rolling_mean_7"] = df["sales"].rolling(7, min_periods=1).mean()</pre>
 
-<p>This is the standard pandas example from documentation. Including the current row in its own rolling window is look-ahead bias. The difference in the computed value at the verifier's check point is about 0.40 — small enough that the model would not catch it from the output.</p>
+<p>This is the standard pandas example from documentation. Including the current row in its own rolling window is look-ahead bias. The difference in the computed value at the verifier's check point is about 0.40  -  small enough that the model would not catch it from the output.</p>
 
 <h3>The common thread</h3>
 
@@ -255,7 +264,7 @@ and `loan_id` to train a logistic regression model.</pre>
 <p>The actionable finding: frontier models do not spontaneously audit feature validity at prediction time. This is a reproducible, exploitable gap that generates consistent failures.</p>
 
 <footer>
-  eval-bench &nbsp;|&nbsp; Gurvirr/Eval-Bench on GitHub &nbsp;|&nbsp; June 2026
+  eval-bench &nbsp;|&nbsp; June 2026
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -290,7 +299,7 @@ new Chart(document.getElementById('chart'), {
       legend: { display: false },
       title: {
         display: true,
-        text: 'pass@1 mean by task — gemini/gemini-3.5-flash via terminus-2',
+        text: 'pass@1 mean by task  -  gemini/gemini-3.5-flash via terminus-2',
         font: { size: 13 }
       }
     },
