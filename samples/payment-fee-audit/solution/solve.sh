@@ -8,52 +8,50 @@ from pathlib import Path
 
 df = pd.read_csv("/root/data/transactions.csv")
 
-def compute_fee_and_tier(row):
-    ct = row["card_type"]
-    a  = float(row["amount"])
-    if ct == "debit":
-        return round(a * 0.005 + 0.10, 4), "debit"
-    elif ct == "credit_standard":
-        if a < 100:
-            return round(a * 0.015 + 0.15, 4), "credit_standard_low"
-        else:
-            return round(a * 0.018 + 0.20, 4), "credit_standard_high"
-    elif ct == "credit_premium":
-        if a < 200:
-            return round(a * 0.022 + 0.25, 4), "credit_premium_low"
-        else:
-            return round(a * 0.025 + 0.30, 4), "credit_premium_high"
-    else:
-        return round(a * 0.028 + 0.35, 4), "corporate"
+def base_fee(ct, a):
+    if ct == "debit": return round(a*0.005+0.10, 6)
+    elif ct == "credit_standard": return round(a*0.015+0.15,6) if a < 100 else round(a*0.018+0.20,6)
+    elif ct == "credit_premium":  return round(a*0.022+0.25,6) if a < 200 else round(a*0.025+0.30,6)
+    else: return round(a*0.028+0.35,6)
 
-fees, tiers = zip(*df.apply(compute_fee_and_tier, axis=1))
-df["fee"]       = fees
-df["rate_tier"] = tiers
+def final_fee(row):
+    f = base_fee(row["card_type"], float(row["amount"]))
+    if int(row["is_disputed"]): f *= 2
+    if float(row["monthly_volume"]) > 5000: f *= 0.90
+    return round(min(f, 25.00), 4)
+
+df["base_fee"]  = df.apply(lambda r: round(base_fee(r["card_type"], float(r["amount"])), 4), axis=1)
+df["final_fee"] = df.apply(final_fee, axis=1)
 df = df.sort_values("transaction_id").reset_index(drop=True)
 
-summary = df.groupby("card_type", as_index=False).agg(
-    n_transactions=("fee","count"),
-    total_fees=("fee","sum"),
-    avg_fee=("fee","mean"),
-).sort_values("card_type").reset_index(drop=True)
-summary["total_fees"] = summary["total_fees"].round(4)
-summary["avg_fee"]    = summary["avg_fee"].round(4)
+merchant_summary = df.groupby("merchant_id", as_index=False).agg(
+    n_transactions=("transaction_id","count"),
+    total_amount=("amount","sum"),
+    total_fees=("final_fee","sum"),
+    monthly_volume=("monthly_volume","first"),
+).sort_values("merchant_id")
+merchant_summary["volume_discount_applied"] = merchant_summary["monthly_volume"].apply(
+    lambda v: "YES" if float(v) > 5000 else "NO"
+)
+merchant_summary["total_amount"] = merchant_summary["total_amount"].round(2)
+merchant_summary["total_fees"]   = merchant_summary["total_fees"].round(4)
 
 wb = Workbook()
 ws1 = wb.active
 ws1.title = "Transaction Fees"
-ws1.append(["transaction_id","card_type","amount","fee","rate_tier"])
+ws1.append(["transaction_id","card_type","amount","is_disputed","monthly_volume","base_fee","final_fee"])
 for _, r in df.iterrows():
     ws1.append([r["transaction_id"], r["card_type"], float(r["amount"]),
-                float(r["fee"]), r["rate_tier"]])
+                int(r["is_disputed"]), float(r["monthly_volume"]),
+                float(r["base_fee"]), float(r["final_fee"])])
 
-ws2 = wb.create_sheet("Summary")
-ws2.append(["card_type","n_transactions","total_fees","avg_fee"])
-for _, r in summary.iterrows():
-    ws2.append([r["card_type"], int(r["n_transactions"]),
-                float(r["total_fees"]), float(r["avg_fee"])])
+ws2 = wb.create_sheet("Merchant Summary")
+ws2.append(["merchant_id","n_transactions","total_amount","total_fees","volume_discount_applied"])
+for _, r in merchant_summary.iterrows():
+    ws2.append([int(r["merchant_id"]), int(r["n_transactions"]),
+                float(r["total_amount"]), float(r["total_fees"]),
+                r["volume_discount_applied"]])
 
 wb.save("/root/fee_audit.xlsx")
-print("Saved /root/fee_audit.xlsx")
-print(summary.to_string())
+print("Saved. Total fees:", df["final_fee"].sum().round(4))
 EOF
