@@ -46,9 +46,9 @@
 
 <h2>1. Distribution</h2>
 
-<p>The benchmark targets one failure class: tasks where the model uses data that would not have been available at prediction time. Every task isolates a specific instance of this  -  target leakage in its various forms.</p>
+<p>The benchmark targets one failure class: tasks where the model uses data that would not have been available at prediction time. Every task isolates a specific instance of this - target leakage in its various forms.</p>
 
-<p>We piloted 14 tasks across different failure modes. The curation process revealed something concrete: gemini-3.5-flash handles documented methodology errors reliably (Bonferroni correction, macro F1, join deduplication, Simpson's paradox). It fails on leakage reasoning. That narrowed the benchmark to 7 tasks that actually provide signal.</p>
+<p>We piloted 14 tasks across different failure modes. The curation process revealed something concrete: gemini-3.5-flash handles documented methodology errors reliably (Bonferroni correction, macro F1, join deduplication, Simpson's paradox). It fails on leakage reasoning. So that is what the benchmark measures.</p>
 
 <h3>In scope</h3>
 <ul>
@@ -63,7 +63,7 @@
 </ul>
 
 <h3>Task rationale</h3>
-<p>Each retained task was chosen because it isolates a specific, documentable failure and produces a binary verifiable answer. Here is the reasoning behind each one:</p>
+<p>Here is the reasoning behind each retained task:</p>
 
 <p><strong>leakage-imputation.</strong> A loan default prediction dataset includes <code>days_past_due</code>, a post-default collection metric. A real data scientist would immediately flag this as unavailable at origination time. The model doesn't. This tests whether the agent audits feature validity, not just whether it can train a model. Motivated by MLE-Bench's finding that feature leakage is a top failure type.</p>
 
@@ -141,11 +141,11 @@
 </table>
 
 <div class="box">
-<strong>The pattern:</strong> gemini-3.5-flash reliably applies documented DS best practices. It fails when it must decide whether a feature is valid at prediction time  -  reasoning that is not documented in any textbook and is not prompted by the task description.
+<strong>The pattern:</strong> gemini-3.5-flash reliably applies documented DS best practices. It fails when it must decide whether a feature is valid at prediction time - reasoning that is not documented in any textbook and is not prompted by the task description.
 </div>
 
 <h3>Difficulty curve</h3>
-<p>The distribution is bimodal. Three tasks fail 100% of the time. One fails 67%. Three pass at 84-97%. There is no gradual slope. Tasks either hit the leakage reasoning gap or the model handles them correctly. The passing tasks are not easier versions of the failing tasks  -  they test a different thing entirely.</p>
+<p>The distribution is bimodal. Three tasks fail 100% of the time. One fails 67%. Three pass between 84-97%. No gradual slope. Tasks either hit the leakage reasoning gap or the model handles them correctly. The passing tasks are not harder versions of the failing tasks - they are testing a completely different thing.</p>
 
 <h2>3. Research Awareness</h2>
 
@@ -200,7 +200,7 @@
 
 <h3>Public data sources</h3>
 <ul>
-  <li>Kaggle datasets for supervised learning tasks  -  many have documented leakage traps in public notebooks</li>
+  <li>Kaggle datasets for supervised learning tasks - many have documented leakage traps in public notebooks</li>
   <li>Visa/Mastercard/Amex public interchange fee schedules for payment analytics tasks</li>
   <li>DABStep's open Adyen dataset for payment domain tasks</li>
   <li>UCI ML Repository for tabular classification/regression problems</li>
@@ -212,7 +212,7 @@
 
 <h3>Verifier design</h3>
 <p>All tasks in this benchmark use deterministic binary verifiers: pytest checks exact field values and the verifier writes 0 or 1 to reward.txt. This was the right choice here because every task has a precise ground truth (either the model used the leaking feature or it did not; either the fee total matches or it does not).</p>
-<p>An LLM-as-judge verifier would be appropriate for tasks requiring open-ended reasoning where the correct answer is not a single number  -  for example, "explain why this model is not deployment-ready" or "identify all risks in this dataset." For the leakage tasks specifically, a judge would be worse: it could be fooled by confident-sounding but wrong explanations. Deterministic checks on the feature name and AUC bound are more reliable.</p>
+<p>An LLM-as-judge verifier would be appropriate for tasks requiring open-ended reasoning where the correct answer is not a single number - for example, "explain why this model is not deployment-ready" or "identify all risks in this dataset." For the leakage tasks specifically, a judge would be worse: it could be fooled by confident-sounding but wrong explanations. Deterministic checks on the feature name and AUC bound are more reliable.</p>
 
 <h3>QA loop</h3>
 <p>Each generated task goes through an automated pipeline before admission:</p>
@@ -224,7 +224,7 @@
 <p>Tasks that fail step 3 are either discarded or flagged for manual review. The target is a 30-40% admission rate from generated candidates to final benchmark. This keeps calibration without requiring manual review of every task.</p>
 
 <h3>AI agent loops used in this project</h3>
-<p>The entire benchmark was built through AI-assisted iteration loops using Kiro (Claude). The AI was treated as a coworker that generates and iterates on implementation, not just a code autocomplete tool.</p>
+<p>The entire benchmark was built through AI-assisted iteration loops using Kiro (Claude). The AI was treated as a coworker, not just a code autocomplete tool.</p>
 
 <h4>Task scaffold generation</h4>
 <p>For each task, I described the failure mode, data structure, and verifier logic in natural language. The agent generated all six files (build_inputs.py, Dockerfile, instruction.md, task.toml, solution/solve.sh, test_outputs.py) in one pass. I ran <code>harbor run -a oracle</code> and <code>harbor run -a nop</code>, pasted the output back to the agent with any failures, and iterated until both passed. Average 2-3 cycles per task. This is faster than hand-writing boilerplate and also catches logical errors earlier, since the agent catches inconsistencies between the solution and the verifier that I might miss on a first pass.</p>
@@ -249,7 +249,7 @@
 
 <h2>5. Failure Analysis</h2>
 
-<p>All three zero-pass-rate tasks were inspected through Harbor's trajectory files. Each failure is a genuine reasoning error: the model runs to completion, produces valid output, and fails the verifier because it used a feature it should not have.</p>
+<p>All three zero-pass-rate tasks were inspected through Harbor's trajectory files. Each failure is a real reasoning error: the model runs to completion, produces valid output, and fails the verifier because it used a feature it should not have.</p>
 
 <h3>leakage-imputation: the model uses a post-default feature to predict defaults</h3>
 
@@ -278,7 +278,7 @@ and `loan_id` to train a logistic regression model.</pre>
 
 <pre>Plan: df["rolling_mean_7"] = df["sales"].rolling(7, min_periods=1).mean()</pre>
 
-<p>This is the standard pandas example from documentation. Including the current row in its own rolling window is look-ahead bias. The difference in the computed value at the verifier's check point is about 0.40  -  small enough that the model would not catch it from the output.</p>
+<p>This is the standard pandas example from documentation. Including the current row in its own rolling window is look-ahead bias. The difference in the computed value at the verifier's check point is about 0.40 - small enough that the model would not catch it from the output.</p>
 
 <h3>The common thread</h3>
 
@@ -286,7 +286,7 @@ and `loan_id` to train a logistic regression model.</pre>
 
 <p>The seven dropped tasks all have explicit correct answers the model knows from training data. The three passing multimodal tasks require reading documents and executing logic, but the logic is written in the documents. No hidden trap. The model just needs to execute correctly.</p>
 
-<p>The actionable finding: frontier models do not spontaneously audit feature validity at prediction time. This is a reproducible, exploitable gap that generates consistent failures.</p>
+<p>The finding: frontier models do not spontaneously audit feature validity at prediction time. This gap is reproducible and generates consistent failures.</p>
 
 <footer>
   eval-bench &nbsp;|&nbsp; June 2026
@@ -324,7 +324,7 @@ new Chart(document.getElementById('chart'), {
       legend: { display: false },
       title: {
         display: true,
-        text: 'pass@1 mean by task  -  gemini/gemini-3.5-flash via terminus-2',
+        text: 'pass@1 mean by task - gemini/gemini-3.5-flash via terminus-2',
         font: { size: 13 }
       }
     },
