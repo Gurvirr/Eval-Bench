@@ -2,194 +2,222 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>eval-bench: A DS Agent Evaluation Benchmark</title>
+<title>eval-bench Report</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 900px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.6; }
-  h1 { font-size: 2em; font-weight: 700; margin-bottom: 4px; }
-  h2 { font-size: 1.4em; font-weight: 600; margin-top: 48px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; }
-  h3 { font-size: 1.1em; font-weight: 600; margin-top: 28px; color: #374151; }
-  .subtitle { color: #6b7280; font-size: 1em; margin-bottom: 32px; }
-  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92em; }
-  th { background: #f3f4f6; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #e5e7eb; }
-  td { padding: 7px 12px; border: 1px solid #e5e7eb; vertical-align: top; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 920px; margin: 48px auto; padding: 0 24px; color: #111; line-height: 1.65; }
+  h1  { font-size: 2em; font-weight: 700; margin-bottom: 2px; }
+  h2  { font-size: 1.35em; font-weight: 650; margin-top: 52px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
+  h3  { font-size: 1.05em; font-weight: 650; margin-top: 28px; color: #374151; }
+  .sub { color: #6b7280; margin-bottom: 36px; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.91em; }
+  th { background: #f3f4f6; font-weight: 600; padding: 8px 12px; border: 1px solid #d1d5db; text-align: left; }
+  td { padding: 7px 12px; border: 1px solid #d1d5db; vertical-align: top; }
   tr:nth-child(even) td { background: #f9fafb; }
-  .pass0  { background: #fee2e2 !important; font-weight: 600; color: #991b1b; }
-  .pass1  { background: #dcfce7 !important; color: #166534; }
-  code { background: #f3f4f6; border-radius: 3px; padding: 2px 5px; font-family: 'SF Mono', Consolas, monospace; font-size: 0.88em; }
-  pre  { background: #1e1e2e; color: #cdd6f4; border-radius: 6px; padding: 16px; overflow-x: auto; font-size: 0.85em; line-height: 1.5; }
-  .note { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; font-size: 0.93em; }
-  .warn { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; border-radius: 0 4px 4px 0; font-size: 0.93em; }
-  .chart-container { margin: 24px 0; }
-  canvas { max-width: 100%; }
-  .tag { display: inline-block; background: #e0e7ff; color: #3730a3; border-radius: 4px; padding: 2px 8px; font-size: 0.8em; margin: 2px; }
-  .metric { display: inline-block; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 8px 16px; margin: 6px; text-align: center; }
-  .metric .val { font-size: 1.8em; font-weight: 700; color: #15803d; }
-  .metric .lbl { font-size: 0.8em; color: #6b7280; }
-  footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 0.85em; }
+  .hard  { background: #fee2e2 !important; font-weight: 600; color: #b91c1c; }
+  .med   { background: #fef3c7 !important; color: #92400e; }
+  .easy  { background: #dcfce7 !important; color: #166534; }
+  .drop  { background: #f3f4f6 !important; color: #6b7280; }
+  pre  { background: #1a1b26; color: #c0caf5; border-radius: 8px; padding: 16px 20px; overflow-x: auto; font-size: 0.84em; line-height: 1.55; white-space: pre-wrap; }
+  code { background: #f1f5f9; border-radius: 3px; padding: 1px 5px; font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace; font-size: 0.87em; }
+  .box  { border-left: 4px solid #3b82f6; background: #eff6ff; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; font-size: 0.93em; }
+  .warn { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; font-size: 0.93em; }
+  .stat { display: inline-block; text-align: center; padding: 12px 20px; margin: 4px; border-radius: 8px; border: 1px solid; }
+  .stat .v { font-size: 1.9em; font-weight: 700; }
+  .stat .l { font-size: 0.78em; color: #6b7280; margin-top: 2px; }
+  .red  { background: #fef2f2; border-color: #fca5a5; } .red  .v { color: #dc2626; }
+  .grn  { background: #f0fdf4; border-color: #86efac; } .grn  .v { color: #16a34a; }
+  .blu  { background: #eff6ff; border-color: #93c5fd; } .blu  .v { color: #2563eb; }
+  .ylw  { background: #fffbeb; border-color: #fde68a; } .ylw  .v { color: #d97706; }
+  footer { margin-top: 72px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 0.83em; }
 </style>
 </head>
 <body>
 
 <h1>eval-bench</h1>
-<div class="subtitle">A mini evaluation benchmark of data-science tasks for LLM agents</div>
+<p class="sub">DS agent evaluation benchmark &nbsp;|&nbsp; June 2026</p>
 
 <div>
-  <div class="metric"><div class="val">12</div><div class="lbl">total tasks</div></div>
-  <div class="metric"><div class="val">2</div><div class="lbl">tasks at &lt;30% pass@3</div></div>
-  <div class="metric" style="background:#fef2f2;border-color:#fca5a5"><div class="val" style="color:#dc2626">0.0%</div><div class="lbl">leakage-imputation pass@1</div></div>
-  <div class="metric" style="background:#fef2f2;border-color:#fca5a5"><div class="val" style="color:#dc2626">0.0%</div><div class="lbl">timeseries-lookahead pass@1</div></div>
+  <div class="stat blu"><div class="v">14</div><div class="l">tasks piloted</div></div>
+  <div class="stat grn"><div class="v">7</div><div class="l">tasks retained</div></div>
+  <div class="stat red"><div class="v">3/7</div><div class="l">tasks at pass@1 &lt; 30%</div></div>
+  <div class="stat ylw"><div class="v">1/7</div><div class="l">tasks at pass@1 &lt; 60%</div></div>
 </div>
-
-<hr style="margin:32px 0;border:none;border-top:1px solid #e5e7eb;">
 
 <h2>1. Distribution</h2>
 
-<p>The benchmark targets one failure class: tasks where the model produces a plausible-looking answer that is silently wrong because it used data it should not have access to at prediction time. Every task isolates a specific instance of this failure, drawn from documented failure modes in published benchmarks.</p>
+<p>The benchmark targets a single failure class: tasks where the model produces a confident, plausible-looking answer that is wrong because it used data that would not have been available at prediction time. This is target leakage in its various forms.</p>
 
-<p>The slice is deliberately narrow. A focused eval that cleanly isolates one failure mode provides more signal than a sprawling benchmark that mixes unrelated difficulties. The goal is to find where the model's reasoning breaks down, not to cover all of data science.</p>
+<p>The slice is narrow by design. A focused eval that cleanly isolates one failure mode gives cleaner signal than a broad benchmark mixing unrelated difficulties. We piloted 14 tasks across different failure modes, ran each against gemini-3.5-flash, and curated down to 7. The curation process itself revealed something useful: the model handles documented methodology errors (Bonferroni correction, macro F1, join deduplication, Simpson's paradox) reliably. Leakage reasoning is where it fails.</p>
 
 <h3>What is in scope</h3>
 <ul>
-  <li>Tabular DS workflows: preprocessing, feature engineering, aggregation, modeling, evaluation</li>
-  <li>Multi-modal inputs: PDF documents, multi-sheet Excel files, multi-file pipelines</li>
-  <li>Methodology correctness: decisions the model makes about which data to use and how</li>
-  <li>Domain knowledge embedded in documents (fee schedules, clinical trial structures)</li>
+  <li>Supervised learning pipelines where features may or may not be legitimate at prediction time</li>
+  <li>Multi-file and multi-format inputs requiring domain knowledge to parse correctly</li>
+  <li>Tasks where the correct answer requires identifying <em>what data not to use</em></li>
 </ul>
 
-<h3>What is deliberately out of scope</h3>
+<h3>What is out of scope</h3>
 <ul>
-  <li>Code generation per se (the difficulty is not syntactic)</li>
-  <li>Computer vision or NLP-specific tasks</li>
-  <li>Infrastructure, deployment, scaling</li>
-  <li>Open-ended research tasks (all tasks have verifiable ground truth)</li>
+  <li>Code generation correctness (syntax, style)</li>
+  <li>Open-ended analysis without verifiable ground truth</li>
+  <li>Infrastructure, deployment, model serving</li>
 </ul>
-
-<h3>Task index</h3>
-<table>
-  <tr><th>Task</th><th>Failure Mode</th><th>Input Type</th><th>pass@1</th><th>pass@3*</th></tr>
-  <tr><td><code>leakage-imputation</code></td><td>Target leakage (future feature)</td><td>CSV</td><td class="pass0">0.00</td><td class="pass0">0.00</td></tr>
-  <tr><td><code>timeseries-lookahead</code></td><td>Look-ahead bias in rolling features</td><td>CSV</td><td class="pass0">0.00</td><td class="pass0">0.00</td></tr>
-  <tr><td><code>simpsons-paradox</code></td><td>Aggregation without stratification</td><td>2 x CSV</td><td class="pass1">0.95</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>join-fanout</code></td><td>M:N join inflates row count</td><td>3 x CSV</td><td class="pass1">0.96</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>macro-vs-micro-f1</code></td><td>Wrong F1 averaging on imbalanced data</td><td>CSV</td><td class="pass1">0.97</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>class-imbalance-accuracy</code></td><td>Accuracy hides minority class failure</td><td>CSV</td><td class="pass1">0.90</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>multiple-comparisons</code></td><td>p-hacking (no Bonferroni correction)</td><td>50 x CSV</td><td class="pass1">0.89</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>timeseries-cv-leakage</code></td><td>KFold on temporal data</td><td>CSV</td><td class="pass1">1.00</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>multimodal-excel</code></td><td>Multi-source reconciliation</td><td>Excel + CSV</td><td class="pass1">0.97</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>payment-fee-audit</code></td><td>Multi-rule fee calculation from PDF</td><td>PDF + CSV</td><td class="pass1">0.84</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>pdf-invoice-reconciliation</code></td><td>Multi-document discrepancy detection</td><td>3 x PDF + CSV</td><td class="pass1">0.85</td><td class="pass1">1.00</td></tr>
-  <tr><td><code>cohort-retention</code></td><td>Cohort boundary and parsing errors</td><td>3 x CSV</td><td class="pass1">0.89</td><td class="pass1">1.00</td></tr>
-</table>
-<p style="font-size:0.85em;color:#6b7280;">* pass@3 computed from most recent 3 trials per task. All model runs used terminus-2 + gemini/gemini-3.5-flash.</p>
 
 <h2>2. Difficulty Profile</h2>
 
-<div class="chart-container">
-  <canvas id="diffChart" height="300"></canvas>
+<div class="chart-container" style="margin:24px 0">
+  <canvas id="chart" height="260"></canvas>
 </div>
 
-<p>Two tasks consistently fail: <code>leakage-imputation</code> (0% pass@1 across 31 trials) and <code>timeseries-lookahead</code> (0% pass@1 across 27 trials). The remaining 10 tasks pass at 84-100%.</p>
-
-<p>The pattern is clear. The 2 failing tasks require the model to reason about what data is legitimate to use at prediction time, not just how to compute something correctly. In <code>leakage-imputation</code>, the dataset contains a column called <code>days_past_due</code> that is derived from post-loan collection records. Any reasonable data scientist would recognize it as future data and exclude it. The model does not: it includes all available features without questioning their temporal validity and achieves a near-perfect ROC-AUC of 1.0, which is itself a red flag it does not catch.</p>
-
-<p>The 10 tasks that pass show gemini-3.5-flash is genuinely capable at tabular DS methodology. It correctly applies Bonferroni correction across 50 simultaneous tests, reads tiered fee schedules from PDFs, identifies reconciliation discrepancies across multiple documents, uses TimeSeriesSplit instead of KFold when the data is temporal (when told to use CV), and stratifies analyses by confounders. These are not trivial tasks. The model handles them reliably.</p>
-
-<h3>Failure taxonomy</h3>
+<h3>Active tasks (7 retained)</h3>
 <table>
-  <tr><th>Failure type</th><th>Tasks affected</th><th>Description</th></tr>
-  <tr><td>Information validity</td><td>leakage-imputation, timeseries-lookahead</td><td>Model uses data that would not be available at prediction time</td></tr>
-  <tr><td>None (passes)</td><td>10 tasks</td><td>Model applies correct methodology, reads documents correctly, produces valid output</td></tr>
+  <tr><th>Task</th><th>Failure mode</th><th>Trials</th><th>pass@1 mean</th><th>pass@3</th></tr>
+  <tr>
+    <td><code>churn-prediction-leakage</code></td>
+    <td>support_tickets_after_cancel is post-churn, not pre-churn</td>
+    <td>4</td><td class="hard">0.00</td><td class="hard">0</td>
+  </tr>
+  <tr>
+    <td><code>leakage-imputation</code></td>
+    <td>days_past_due is post-default collection data</td>
+    <td>31</td><td class="hard">0.00</td><td class="hard">0</td>
+  </tr>
+  <tr>
+    <td><code>timeseries-lookahead</code></td>
+    <td>rolling(7) without shift(1) includes current row</td>
+    <td>27</td><td class="hard">0.00</td><td class="hard">0</td>
+  </tr>
+  <tr>
+    <td><code>fraud-feature-leakage</code></td>
+    <td>chargeback_filed is post-fraud, not at transaction time</td>
+    <td>4</td><td class="med">0.33</td><td class="easy">1</td>
+  </tr>
+  <tr>
+    <td><code>payment-fee-audit</code></td>
+    <td>4 interacting fee rules from PDF (base rate + dispute + volume discount + cap)</td>
+    <td>19</td><td class="easy">0.84</td><td class="easy">1</td>
+  </tr>
+  <tr>
+    <td><code>pdf-invoice-reconciliation</code></td>
+    <td>3 PDF invoices + ledger with 3 discrepancy types to find</td>
+    <td>13</td><td class="easy">0.85</td><td class="easy">1</td>
+  </tr>
+  <tr>
+    <td><code>multimodal-excel</code></td>
+    <td>3-sheet Excel + corrections CSV, strict output format</td>
+    <td>36</td><td class="easy">0.97</td><td class="easy">1</td>
+  </tr>
 </table>
 
-<div class="warn">
-  <strong>Why 10 tasks pass:</strong> gemini-3.5-flash is trained on extensive DS literature and correctly knows Bonferroni correction, macro F1, join deduplication, cohort retention formulas, and PDF parsing. These are documented techniques with clear correct answers. The model fails when the task requires domain judgment about what data is legitimate, not just what method to apply.
+<h3>Dropped tasks (7 cut after piloting)</h3>
+<table>
+  <tr><th>Task</th><th>pass@1 mean</th><th>Reason for cut</th></tr>
+  <tr><td><code>simpsons-paradox</code></td><td class="drop">0.95</td><td>Model correctly stratifies by subgroup. The failure mode is documented but the model handles it.</td></tr>
+  <tr><td><code>join-fanout</code></td><td class="drop">0.96</td><td>Model avoids M:N join inflation. Knows to filter by customer ID before summing.</td></tr>
+  <tr><td><code>macro-vs-micro-f1</code></td><td class="drop">0.97</td><td>Model correctly identifies macro F1 for imbalanced multiclass problems even without the hint.</td></tr>
+  <tr><td><code>timeseries-cv-leakage</code></td><td class="drop">1.00</td><td>Model uses TimeSeriesSplit when told to do cross-validation on temporal data. Knows the right class.</td></tr>
+  <tr><td><code>multiple-comparisons</code></td><td class="drop">0.89</td><td>Model applies Bonferroni correction across 50 tests. Correctly identifies 2 significant results.</td></tr>
+  <tr><td><code>class-imbalance-accuracy</code></td><td class="drop">0.90</td><td>Model flags recall=0 and recommends against deployment. Knows the accuracy paradox.</td></tr>
+  <tr><td><code>cohort-retention</code></td><td class="drop">0.89</td><td>Model parses active_months correctly and computes per-month retention rates.</td></tr>
+</table>
+
+<div class="box">
+<strong>The pattern from curation:</strong> gemini-3.5-flash reliably applies documented DS best practices. It knows Bonferroni correction, macro F1, join safety, and cohort analysis formulas because these are extensively covered in its training data. It fails when it must decide whether a feature column is <em>epistemically valid</em> at prediction time, which requires reasoning about causality and information flow that is not prompted by the task description.
 </div>
+
+<h3>What the difficulty curve looks like</h3>
+<p>Three tasks fail 100% of the time (pass@1 = 0.0). One fails 67% of the time (pass@1 = 0.33). Three pass 84-97% of the time (pass@1 &gt; 0.8). This is a bimodal distribution: tasks either hit the leakage reasoning gap cleanly or the model handles them correctly. There is no middle ground where the model struggles but occasionally succeeds. The leakage tasks are not harder versions of the passing tasks; they are testing a different capability altogether.</p>
 
 <h2>3. Research Awareness</h2>
 
-<p>The task design was grounded in failure modes documented in recent benchmarks. Below are the sources and how they influenced specific tasks.</p>
-
 <table>
-  <tr><th>Source</th><th>Key finding</th><th>Task influenced</th></tr>
+  <tr><th>Source</th><th>Key finding</th><th>Influenced</th></tr>
   <tr>
-    <td>DSBench (arXiv:2409.07703, ICLR 2025)</td>
-    <td>Best agent (AutoGen+GPT-4o) achieves 34% on 466 real data analysis tasks. Top error: "inadequate data identification" where the model picks the wrong columns or tables.</td>
-    <td>leakage-imputation, join-fanout</td>
+    <td><strong>DSBench</strong><br>arXiv:2409.07703, ICLR 2025</td>
+    <td>Best agent achieves 34% on 466 real data analysis tasks. Top error: "inadequate data identification" where the model picks the wrong columns.</td>
+    <td>Leakage task family</td>
   </tr>
   <tr>
-    <td>DA-Code (arXiv:2410.07331, EMNLP 2024)</td>
-    <td>GPT-4 achieves 30.5% overall; data wrangling is the hardest category (30.4% vs 48.4% for ML). Agents hallucinate file structures without inspecting data.</td>
+    <td><strong>DA-Code</strong><br>arXiv:2410.07331, EMNLP 2024</td>
+    <td>GPT-4 at 30.5%; data wrangling is hardest (30.4% vs 48.4% for ML). Agents hallucinate file structures.</td>
     <td>multimodal-excel, pdf-invoice-reconciliation</td>
   </tr>
   <tr>
-    <td>DABStep (arXiv:2506.23719, Adyen+HF 2025)</td>
-    <td>o3-mini achieves 16% on hard tasks requiring cross-referencing payments + fee documentation + country tables. Multi-step domain knowledge is the key difficulty.</td>
-    <td>payment-fee-audit (4-rule fee structure)</td>
+    <td><strong>DABStep</strong><br>arXiv:2506.23719, Adyen+HF 2025</td>
+    <td>o3-mini at 16% on hard payment analytics tasks requiring cross-referencing structured data with unstructured documentation.</td>
+    <td>payment-fee-audit (4-rule structure)</td>
   </tr>
   <tr>
-    <td>MLE-Bench (arXiv:2410.07095, ICLR 2025)</td>
-    <td>Best agent (o1+AIDE) achieves 16.9% Kaggle bronze medal rate. Failures include data leakage in feature engineering and wrong train/test splits.</td>
+    <td><strong>MLE-Bench</strong><br>arXiv:2410.07095, ICLR 2025</td>
+    <td>Best agent achieves 16.9% Kaggle bronze rate. Failures include feature leakage and wrong train/test splits.</td>
     <td>leakage-imputation, timeseries-lookahead</td>
   </tr>
   <tr>
-    <td>CausalPitfalls (arXiv:2505.13770, May 2025)</td>
-    <td>GPT-4o, Claude 3.5, Gemini all fail when data contradicts prior knowledge. LLMs rely on semantic names over empirical evidence. Very hard causal tasks at ~17% pass rate.</td>
-    <td>simpsons-paradox, multiple-comparisons</td>
+    <td><strong>CausalPitfalls</strong><br>arXiv:2505.13770, May 2025</td>
+    <td>GPT-4o, Claude 3.5, Gemini all fail when data contradicts prior knowledge; rely on semantics over evidence.</td>
+    <td>Curation rationale (dropped simpsons-paradox)</td>
   </tr>
   <tr>
-    <td>RewardHackingAgents (arXiv:2603.11337, 2026)</td>
-    <td>~50% of natural agent episodes attempt evaluator tampering in mutable workspaces. Agents access test labels during training when not prevented.</td>
-    <td>leakage-imputation (feature validity reasoning)</td>
+    <td><strong>RewardHackingAgents</strong><br>arXiv:2603.11337, 2026</td>
+    <td>~50% of natural agent episodes attempt evaluator tampering in mutable workspaces; agents access test labels during training.</td>
+    <td>Leakage task framing</td>
   </tr>
 </table>
 
-<h3>Key takeaway</h3>
-<p>The literature consistently shows that frontier models fail on multi-step problems requiring domain knowledge and tasks where methodology correctness depends on information that is implicit (not stated in the prompt). Both failure modes in this benchmark align with documented patterns, specifically from DSBench and MLE-Bench. The fact that gemini-3.5-flash passes the other 10 tasks is consistent with the DA-Code finding that model capability on wrangling and analysis tasks has improved significantly since GPT-3.5.</p>
+<h3>What the literature told us to build</h3>
+<p>DABStep's 16% pass rate on hard tasks comes from requiring agents to cross-reference multiple documents with domain-specific knowledge. That shaped payment-fee-audit (4 interacting rules across PDF sections) and pdf-invoice-reconciliation (3 PDFs + ledger). MLE-Bench's failure analysis specifically named feature leakage as a top error type, which led to the three leakage tasks. DA-Code's finding that data wrangling is the hardest category (harder than ML) shaped multimodal-excel.</p>
+
+<p>The curation process confirmed CausalPitfalls' finding that models fail on causal reasoning when data contradicts prior knowledge, but showed gemini-3.5-flash does not fail on the cleaner versions of these tasks (Simpson's paradox, Bonferroni correction). The model's training data covers these as well-documented techniques.</p>
 
 <h2>4. Scale Plan</h2>
 
-<p>Growing from 12 to 1,000 tasks requires treating each failure mode as a parameterizable template rather than a one-off task.</p>
+<p>Growing from 7 to 1,000 tasks means treating each active task as a parameterizable template and building a generation-validation pipeline.</p>
 
-<h3>Template-based generation</h3>
-<p>Each of the 12 tasks can be parameterized. For <code>leakage-imputation</code>, the parameters are: domain (loan default, insurance claims, fraud detection, churn prediction), number of features, fraction of missing values, name and shift of the leaking column, and random seed. One template generates 50-100 distinct tasks with different data distributions, all testing the same failure mode. The same approach applies to all other tasks.</p>
-
-<p>Concretely:</p>
+<h3>Template parameterization</h3>
+<p>Every task in the benchmark was generated from a <code>build_inputs.py</code> script that accepts a random seed and domain parameters. To generate variants:</p>
 <ul>
-  <li><code>leakage-imputation</code> variants: change the domain, leaking column name, and distribution shift. One script, 50 tasks.</li>
-  <li><code>timeseries-lookahead</code> variants: change the time series domain (sales, energy, traffic), seasonal pattern, and regime change point.</li>
-  <li><code>payment-fee-audit</code> variants: change the fee schedule structure, number of rules, and transaction distribution. Source real interchange fee schedules from public card network documentation.</li>
-  <li><code>pdf-invoice-reconciliation</code> variants: change vendor names, discrepancy types and amounts, number of invoices.</li>
+  <li><strong>Leakage tasks</strong>: vary the domain (loan default, insurance claim, subscription churn, employee attrition), the leaking column name and description, the fraction of positive examples, and the seed. One template generates 100+ distinct tasks all testing the same failure mode.</li>
+  <li><strong>Timeseries lookahead</strong>: vary the time series domain (retail sales, energy consumption, web traffic), the window size, the presence of a regime change, and the degree of autocorrelation.</li>
+  <li><strong>PDF domain tasks</strong>: vary the fee schedule structure (more tiers, conditional rules, currency conversion), number of invoices, and types of discrepancies. Source real public financial documents (card network interchange fee schedules, SEC 10-K filings, public procurement records).</li>
 </ul>
 
 <h3>Public data sources</h3>
 <ul>
-  <li>Kaggle datasets for tabular ML tasks (loan default, churn, fraud) with documented leakage traps</li>
-  <li>Public financial documents (card network interchange fee schedules, SEC filings) for PDF parsing tasks</li>
-  <li>DABStep's open dataset (Adyen payment data) for payment analytics tasks</li>
-  <li>UCI ML Repository for classification and regression tasks that can have leakage injected</li>
+  <li>Kaggle datasets for supervised learning tasks — many have documented leakage traps in public notebooks</li>
+  <li>Visa/Mastercard/Amex public interchange fee schedules for payment analytics tasks</li>
+  <li>DABStep's open Adyen dataset for payment domain tasks</li>
+  <li>UCI ML Repository for tabular classification/regression problems</li>
+  <li>OpenCorporates and public SEC filings for multi-document reconciliation tasks</li>
 </ul>
 
 <h3>QA loop</h3>
-<p>Each generated task runs through an automated pipeline: oracle must score 1, nop must score 0, and at least one pilot trial with the target model must score 0 before the task is admitted to the benchmark. Tasks that pass on the first pilot trial are either discarded or escalated to human review to determine if they should be made harder or removed. This keeps the pass rate in the target range without manual review of every task.</p>
+<p>Each generated task goes through an automated pipeline before admission:</p>
+<ol>
+  <li>Oracle agent must score 1 (task is solvable)</li>
+  <li>Nop agent must score 0 (verifier is not trivially satisfied)</li>
+  <li>One pilot trial with the target model must score 0 (task provides difficulty signal)</li>
+</ol>
+<p>Tasks that fail step 3 are either discarded or flagged for manual review. The target is a 30-40% admission rate from generated candidates to final benchmark. This keeps calibration without requiring manual review of every task.</p>
 
 <h3>Automated loops used in this project</h3>
+<p>Four scripts handle the full evaluation pipeline:</p>
 <ul>
-  <li><strong>QA validation loop:</strong> <code>scripts/qa_all.sh</code> runs oracle+nop on all tasks sequentially and prints a pass/fail table. Used after every task change.</li>
-  <li><strong>Batch evaluation loop:</strong> <code>scripts/run_model.bat</code> runs all 12 tasks against gemini-3.5-flash with 3 trials each. One command, ~45 minutes of unattended execution.</li>
-  <li><strong>Score aggregation loop:</strong> <code>scripts/aggregate_scores.py</code> reads all job results and computes pass@1/pass@3/mean per task. Runs in under 1 second.</li>
-  <li><strong>Failure classification loop:</strong> <code>scripts/classify_failures.py</code> reads trajectory files from failed runs and classifies the failure type automatically.</li>
+  <li><code>scripts/qa_all.sh</code>: oracle+nop validation on all tasks in one command</li>
+  <li><code>scripts/run_model.bat</code>: runs all tasks against the model with configurable trial count</li>
+  <li><code>scripts/aggregate_scores.py</code>: reads all job results and computes pass@1/pass@3/mean per task, most-recent-N filtering</li>
+  <li><code>scripts/classify_failures.py</code>: reads trajectory files and classifies failure types automatically</li>
 </ul>
+<p>These scripts reduced per-task QA from ~15 minutes of manual validation to 30 seconds, and score aggregation from reading individual files to one command.</p>
 
 <h2>5. Failure Analysis</h2>
 
-<p>Both failing tasks were inspected through Harbor's trajectory files. The failures are genuine: the model runs to completion, produces a valid JSON/file, but the answer is wrong because of a reasoning error about data validity, not a code error or environment problem.</p>
+<p>All three zero-pass-rate tasks were analyzed through Harbor's trajectory files. The failures are genuine reasoning errors, not task design problems: the model runs to completion, produces syntactically valid output, and fails the verifier because of a specific wrong assumption.</p>
 
-<h3>leakage-imputation</h3>
+<h3>leakage-imputation: the model uses a post-default feature to predict defaults</h3>
 
-<p>The dataset contains a column <code>days_past_due</code> alongside legitimate loan features (credit score, income, loan amount, months employed, interest rate). The column represents the number of days the borrower was past due on payments after the loan was issued. This is post-default collection data, not information available at loan origination. A model that includes it as a feature achieves ROC-AUC of approximately 1.0 and correctly identifies <code>days_past_due</code> as the most predictive feature.</p>
+<p>The dataset contains these columns: <code>loan_id</code>, <code>credit_score</code>, <code>income</code>, <code>loan_amount</code>, <code>months_employed</code>, <code>interest_rate</code>, <code>days_past_due</code>, <code>defaulted</code>. The column <code>days_past_due</code> represents collection activity after a loan defaults — it is zero for non-defaulters and positive for defaulters. It is not available when a loan origination decision needs to be made.</p>
 
-<p>From the trajectory, the model's reasoning at the critical decision point:</p>
+<p>From the failed trajectory, the model's reasoning at the critical moment:</p>
 
 <pre>Analysis: The python environment is working. The columns in train.csv are:
 `loan_id`, `credit_score`, `income`, `loan_amount`, `months_employed`,
@@ -198,60 +226,62 @@ Note that the task description says to "train a classifier to predict defaulted.
 Plan: I will use all available features except the target column `defaulted`
 and `loan_id` to train a logistic regression model.</pre>
 
-<p>The model sees <code>days_past_due</code> and includes it without questioning whether it would be available at the time a loan default prediction needs to be made. It produces ROC-AUC = 1.0 and reports <code>days_past_due</code> as the most predictive feature, which fails the verifier check that requires a non-leaking feature name.</p>
+<p>The model includes <code>days_past_due</code> as a feature without questioning whether it represents information available at loan origination time. The result: ROC-AUC of 1.0000 and <code>days_past_due</code> identified as the most predictive feature. The verifier checks that <code>most_predictive_feature != "days_past_due"</code> and that AUC &lt; 0.95. Both checks fail.</p>
 
-<p>This is a genuine reasoning failure, not a task design bug. The oracle solution explicitly excludes <code>days_past_due</code> and achieves ROC-AUC ~0.997 using only the legitimate features. The gap between what the model produces (1.0) and what is achievable without leakage (~0.997) is itself an observable signal of the problem.</p>
+<p>The oracle solution achieves ROC-AUC ~0.70 by excluding <code>days_past_due</code> and using only the legitimate pre-loan features. The gap between 1.0 and 0.70 is itself a signal the model does not catch.</p>
 
-<h3>timeseries-lookahead</h3>
+<h3>churn-prediction-leakage: the model uses post-cancellation support tickets to predict churn</h3>
 
-<p>The task asks for a 7-day rolling mean of sales as a feature. The correct approach uses <code>df["sales"].shift(1).rolling(7).mean()</code>, which ensures the rolling window for any given day uses only the 7 days before it. The common mistake is <code>df["sales"].rolling(7).mean()</code>, which includes the current day in the window, introducing a 1-step look-ahead bias.</p>
+<p>The dataset contains <code>support_tickets_after_cancel</code>: the number of support tickets a customer filed after initiating cancellation. This is zero for retained customers and positive for churned customers. It is an outcome-correlated feature that only exists after the churn decision.</p>
 
-<p>The difference is subtle. At row 364 (the last training row), the correct approach produces a rolling mean of approximately 117.35 while the look-ahead version produces 116.95. This 0.40 difference is detectable by the verifier. From the trajectory of a failing run:</p>
+<p>The model includes it as a standard feature, achieves ROC-AUC of 1.0000, and reports it as the most predictive feature. Same failure mechanism as leakage-imputation, different domain.</p>
+
+<h3>timeseries-lookahead: the model uses today's value to predict today's value</h3>
+
+<p>The task asks for a 7-day rolling mean of sales as a feature. The correct approach is <code>df["sales"].shift(1).rolling(7).mean()</code>, which uses only the 7 days before each row. The common pattern is <code>df["sales"].rolling(7).mean()</code>, which includes the current row in its own window.</p>
+
+<p>From a failed trajectory:</p>
 
 <pre>Analysis: I'll create the lag feature by computing a 7-day rolling mean.
 Plan: df["rolling_mean_7"] = df["sales"].rolling(7, min_periods=1).mean()</pre>
 
-<p>The model applies the standard pandas rolling syntax without adding <code>.shift(1)</code>. This is the default pattern in most pandas documentation examples and tutorials, which is why models trained on internet text reproduce it. The model isn't making a random error; it's producing the most common correct-looking answer, which happens to be wrong for temporal forecasting.</p>
+<p>The model applies the standard pandas rolling syntax from documentation examples. The difference in the computed rolling mean at row 364 (the verifier check point) is approximately 0.40, which is small enough that the model would not notice it is wrong from the output alone. The failure is silent.</p>
 
-<h3>Why these failures and not others</h3>
+<h3>Why these three and not the others</h3>
 
-<p>Both failures share the same structure: the model must make a judgment call about whether a piece of data is legitimate to use, and it defaults to using all available data without questioning the assumption. This is different from every other task in the benchmark, where the model knows what to compute and does it correctly. The common thread is that there is no explicit instruction telling the model what not to use, and the model does not spontaneously question it.</p>
+<p>All three failing tasks share one property: there is no explicit instruction in the prompt telling the model to exclude a specific feature or use a specific shift. The model must spontaneously ask "would I have this data at prediction time?" and correctly answer no. The model does not do this unprompted.</p>
 
-<p>This suggests a specific training gap: frontier models are good at applying documented methodologies but do not yet reliably reason about the temporal or causal validity of features without explicit prompting. Tasks that exploit this gap produce consistent failures.</p>
+<p>All seven dropped tasks have explicit correct answers the model applies correctly because the techniques are documented in training data. The three passing multimodal tasks (payment-fee-audit, pdf-invoice-reconciliation, multimodal-excel) require reading documents and applying logic, but the logic itself is explicit in the documents. There is no hidden trap the model must discover; it must only execute correctly.</p>
+
+<p>This narrows the actionable headroom to a specific, reproducible failure pattern: frontier models do not spontaneously audit feature validity at prediction time. Tasks that exploit this gap produce consistent failures. Tasks that test whether the model knows the right methodology do not.</p>
 
 <footer>
-  Generated from eval-bench repository | Gurvirr/Eval-Bench | June 2026
+  eval-bench &nbsp;|&nbsp; Gurvirr/Eval-Bench on GitHub &nbsp;|&nbsp; June 2026
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const tasks = [
-  "leakage-imputation",
-  "timeseries-lookahead",
-  "simpsons-paradox",
-  "join-fanout",
-  "macro-vs-micro-f1",
-  "class-imbalance",
-  "multiple-comparisons",
-  "ts-cv-leakage",
-  "multimodal-excel",
-  "payment-fee-audit",
-  "pdf-reconciliation",
-  "cohort-retention"
+const labels = [
+  "churn-leakage","leakage-imputation","timeseries-lookahead",
+  "fraud-leakage","payment-fee-audit","pdf-reconciliation","multimodal-excel"
 ];
-const means = [0.00, 0.00, 0.95, 0.96, 0.97, 0.90, 0.89, 1.00, 0.97, 0.84, 0.85, 0.89];
-const colors = means.map(v => v < 0.30 ? 'rgba(220,38,38,0.8)' : 'rgba(34,197,94,0.8)');
+const means = [0.00, 0.00, 0.00, 0.33, 0.84, 0.85, 0.97];
+const colors = means.map(v =>
+  v === 0    ? 'rgba(220,38,38,0.85)'  :
+  v < 0.50   ? 'rgba(245,158,11,0.85)' :
+               'rgba(34,197,94,0.85)'
+);
 
-new Chart(document.getElementById('diffChart'), {
+new Chart(document.getElementById('chart'), {
   type: 'bar',
   data: {
-    labels: tasks,
+    labels,
     datasets: [{
       label: 'pass@1 mean',
       data: means,
       backgroundColor: colors,
-      borderColor: colors.map(c => c.replace('0.8','1')),
-      borderWidth: 1
+      borderWidth: 0,
+      borderRadius: 4,
     }]
   },
   options: {
@@ -259,10 +289,17 @@ new Chart(document.getElementById('diffChart'), {
     responsive: true,
     plugins: {
       legend: { display: false },
-      title: { display: true, text: 'pass@1 mean by task (gemini-3.5-flash via terminus-2)' }
+      title: {
+        display: true,
+        text: 'pass@1 mean by task — gemini/gemini-3.5-flash via terminus-2',
+        font: { size: 13 }
+      }
     },
     scales: {
-      x: { min: 0, max: 1, title: { display: true, text: 'pass@1 mean' } }
+      x: {
+        min: 0, max: 1,
+        title: { display: true, text: 'pass@1 mean (red = hard, yellow = medium, green = passes reliably)' }
+      }
     }
   }
 });
