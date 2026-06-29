@@ -39,8 +39,8 @@
 <div>
   <div class="stat blu"><div class="v">14</div><div class="l">tasks piloted</div></div>
   <div class="stat grn"><div class="v">7</div><div class="l">tasks retained</div></div>
-  <div class="stat red"><div class="v">3/7</div><div class="l">tasks at pass@1 &lt; 30%</div></div>
-  <div class="stat ylw"><div class="v">1/7</div><div class="l">tasks at pass@1 &lt; 60%</div></div>
+  <div class="stat red"><div class="v">3</div><div class="l">tasks: pass@1 = 0%</div></div>
+  <div class="stat ylw"><div class="v">1</div><div class="l">task: pass@1 = 33%</div></div>
 </div>
 
 <h2>1. Distribution</h2>
@@ -64,6 +64,8 @@
 </ul>
 
 <h2>2. Difficulty Profile</h2>
+
+<p>The chart below shows pass@1 mean per task across all trials. Red = model fails consistently. Yellow = model fails most of the time. Green = model handles it reliably. The bimodal shape is the main finding.</p>
 
 <div class="chart-container" style="margin:24px 0">
   <canvas id="chart" height="260"></canvas>
@@ -90,7 +92,7 @@
   <tr>
     <td><code>fraud-feature-leakage</code></td>
     <td>chargeback_filed is post-fraud, not at transaction time</td>
-    <td>4</td><td class="med">0.33</td><td class="easy">1</td>
+    <td>4</td><td class="med">0.33</td><td class="med">1*</td>
   </tr>
   <tr>
     <td><code>payment-fee-audit</code></td>
@@ -108,6 +110,7 @@
     <td>36</td><td class="easy">0.97</td><td class="easy">1</td>
   </tr>
 </table>
+<p style="font-size:0.83em;color:#6b7280;">* fraud-feature-leakage has 4 trials (not yet at the full 3-trial-per-job target). The 0.33 mean is from 4 independent runs. All other tasks have 4+ trials. pass@3 computed from most recent 3 trials per task.</p>
 
 <h3>Dropped tasks (7 cut after piloting)</h3>
 <table>
@@ -189,6 +192,13 @@
   <li>UCI ML Repository for tabular classification/regression problems</li>
   <li>OpenCorporates and public SEC filings for multi-document reconciliation tasks</li>
 </ul>
+
+<h3>Augmentation strategy</h3>
+<p>Within the leakage template, difficulty can be tuned by varying the plausibility of the leaking column name. A column called <code>is_default_confirmed</code> is obviously a label. A column called <code>days_past_due</code> looks like a legitimate financial metric. A column called <code>delinquency_status</code> is ambiguous. Generating tasks across this spectrum produces a difficulty gradient within the same failure mode, useful for curriculum learning or for finding the exact capability threshold.</p>
+
+<h3>Verifier design</h3>
+<p>All tasks in this benchmark use deterministic binary verifiers: pytest checks exact field values and the verifier writes 0 or 1 to reward.txt. This was the right choice here because every task has a precise ground truth (either the model used the leaking feature or it did not; either the fee total matches or it does not).</p>
+<p>An LLM-as-judge verifier would be appropriate for tasks requiring open-ended reasoning where the correct answer is not a single number — for example, "explain why this model is not deployment-ready" or "identify all risks in this dataset." For the leakage tasks specifically, a judge would be worse: it could be fooled by confident-sounding but wrong explanations. Deterministic checks on the feature name and AUC bound are more reliable.</p>
 
 <h3>QA loop</h3>
 <p>Each generated task goes through an automated pipeline before admission:</p>
