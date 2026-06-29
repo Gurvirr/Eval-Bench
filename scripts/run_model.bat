@@ -11,6 +11,9 @@ echo.
 
 harbor run -p samples/leakage-imputation        -a %AGENT% -m %MODEL% -k %TRIALS%
 harbor run -p samples/timeseries-lookahead      -a %AGENT% -m %MODEL% -k %TRIALS%
+harbor run -p samples/payment-fee-audit         -a %AGENT% -m %MODEL% -k %TRIALS%
+harbor run -p samples/pdf-invoice-reconciliation -a %AGENT% -m %MODEL% -k %TRIALS%
+harbor run -p samples/cohort-retention          -a %AGENT% -m %MODEL% -k %TRIALS%
 harbor run -p samples/simpsons-paradox          -a %AGENT% -m %MODEL% -k %TRIALS%
 harbor run -p samples/join-fanout               -a %AGENT% -m %MODEL% -k %TRIALS%
 harbor run -p samples/macro-vs-micro-f1         -a %AGENT% -m %MODEL% -k %TRIALS%
