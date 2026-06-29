@@ -62,6 +62,23 @@
   <li>Code generation correctness, open-ended analysis without verifiable ground truth, infrastructure</li>
 </ul>
 
+<h3>Task rationale</h3>
+<p>Each retained task was chosen because it isolates a specific, documentable failure and produces a binary verifiable answer. Here is the reasoning behind each one:</p>
+
+<p><strong>leakage-imputation.</strong> A loan default prediction dataset includes <code>days_past_due</code>, a post-default collection metric. A real data scientist would immediately flag this as unavailable at origination time. The model doesn't. This tests whether the agent audits feature validity, not just whether it can train a model. Motivated by MLE-Bench's finding that feature leakage is a top failure type.</p>
+
+<p><strong>churn-prediction-leakage.</strong> Same failure mechanism, different domain. A SaaS churn dataset includes <code>support_tickets_after_cancel</code>. The column name is plausible enough that the model doesn't question it, but the tickets are filed after cancellation. Two tasks with the same failure mode but different domains establish that the failure is reproducible and not a one-off quirk of the loan dataset.</p>
+
+<p><strong>fraud-feature-leakage.</strong> A payment fraud dataset includes <code>chargeback_filed</code>. Chargebacks are filed after fraud is disputed, not at transaction time. This task is slightly harder to detect than the others because "chargeback" sounds like a transaction property, not an outcome. That's reflected in the higher pass@1 of 0.33 vs 0.00 for the other two leakage tasks.</p>
+
+<p><strong>timeseries-lookahead.</strong> The model must compute a 7-day rolling mean as a feature. The standard pandas syntax <code>df["sales"].rolling(7).mean()</code> includes the current row in its own window. The correct syntax uses <code>shift(1)</code> first. The error is silent: the model produces a number and has no way to know it's wrong without understanding what "backward-only" means in a forecasting context. Motivated by MLE-Bench and the arXiv:2512.23847 paper on lookahead bias in LLM forecasts.</p>
+
+<p><strong>payment-fee-audit.</strong> A PDF fee schedule with four interacting rules (base interchange rate by card type and amount tier, dispute surcharge, merchant volume discount, fee cap) plus a transactions CSV. The model must read the document to extract the rules and apply all four correctly. Tasks with domain knowledge embedded in documents are harder because the model cannot rely on memorized formulas. Motivated by DABStep's structure: cross-referencing structured data with unstructured documentation.</p>
+
+<p><strong>pdf-invoice-reconciliation.</strong> Three vendor invoice PDFs and a ledger CSV with three planted discrepancies (an amount mismatch, a missing invoice, and a phantom ledger entry). The model must parse the PDFs, join against the ledger, and identify all three. This tests multi-document reasoning under a strict structured output requirement. Motivated by DA-Code's finding that data wrangling with multi-format inputs is the hardest category.</p>
+
+<p><strong>multimodal-excel.</strong> An Excel workbook with three sheets plus a corrections CSV. The agent must join all four sources, compute net figures, and write a structured Excel output with exact sheet names and column headers. Motivated by the sample Harbor task: difficulty comes from precision and format compliance across multiple interconnected sources, not from a conceptual trap.</p>
+
 <h2>2. Difficulty Profile</h2>
 
 <p>The chart below shows pass@1 mean per task across all trials. Red = model fails consistently. Yellow = model fails most of the time. Green = model handles it reliably. The bimodal shape is the main finding.</p>
