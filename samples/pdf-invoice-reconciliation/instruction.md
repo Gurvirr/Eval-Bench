@@ -4,30 +4,24 @@ Files under `/root/data/`:
 - `invoice_acme.pdf` — invoice from Acme Supplies (INV-2024-001)
 - `invoice_techpro.pdf` — invoice from TechPro Ltd (INV-2024-002)
 - `invoice_cleanco.pdf` — invoice from CleanCo Services (INV-2024-003)
-- `ledger.csv` — accounting ledger entries: `entry_id`, `vendor`, `description`, `amount`, `invoice_ref`, `date`
+- `ledger.csv` — accounting ledger: `entry_id`, `vendor`, `description`, `amount`, `invoice_ref`, `date`, `payment_status`
 
-Your task: reconcile the invoices against the ledger and identify all discrepancies.
+Reconcile the invoices against the ledger and save to **`/root/reconciliation.xlsx`**.
 
-Save results to `/root/results.json`:
+The output workbook must have exactly two sheets:
 
-```json
-{
-  "total_invoiced": 0.00,
-  "total_in_ledger": 0.00,
-  "n_discrepancies": 0,
-  "discrepancies": [
-    {
-      "type": "string",
-      "description": "string",
-      "amount_difference": 0.00
-    }
-  ]
-}
-```
+**Sheet 1 — name: `Ledger vs Invoices`**
+Headers (row 1): `invoice_ref`, `vendor`, `invoice_total`, `ledger_total`, `difference`, `status`
+One row per invoice (INV-2024-001, INV-2024-002, INV-2024-003), sorted by `invoice_ref`.
+- `invoice_total`: total from the PDF invoice
+- `ledger_total`: sum of ledger entries for that invoice_ref (0 if none)
+- `difference`: invoice_total - ledger_total
+- `status`: exactly `"MATCH"` if difference is 0, `"DISCREPANCY"` if not
 
-Discrepancy types:
-- `"amount_mismatch"` — invoice and ledger record different amounts for the same item
-- `"missing_from_ledger"` — invoice exists but no ledger entry
-- `"phantom_ledger_entry"` — ledger entry with no corresponding invoice
+**Sheet 2 — name: `Discrepancy Report`**
+Headers (row 1): `type`, `description`, `amount`
+One row per discrepancy found. `type` must be exactly one of:
+`"AMOUNT_MISMATCH"`, `"MISSING_FROM_LEDGER"`, `"PHANTOM_ENTRY"`
 
-Round all monetary values to 2 decimal places.
+All monetary values stored as numbers rounded to 2 decimal places.
+Column names must match exactly (case-sensitive).

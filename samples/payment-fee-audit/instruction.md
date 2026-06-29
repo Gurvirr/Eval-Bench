@@ -4,27 +4,19 @@ Files under `/root/data/`:
 - `fee_schedule.pdf` — the official interchange fee schedule with rates by card type and amount tier
 - `transactions.csv` — processed transactions: `transaction_id`, `card_type`, `amount`, `merchant_id`, `date`
 
-Your task: calculate the correct interchange fee for each transaction using the rates in the PDF, then produce a summary report.
+Compute the correct interchange fee for each transaction using the rates in the PDF and save to **`/root/fee_audit.xlsx`**.
 
-Save results to `/root/results.json`:
+The output workbook must have exactly two sheets:
 
-```json
-{
-  "total_fees": 0.0000,
-  "fees_by_card_type": {
-    "debit": 0.0000,
-    "credit_standard": 0.0000,
-    "credit_premium": 0.0000,
-    "corporate": 0.0000
-  },
-  "n_transactions_by_card_type": {
-    "debit": 0,
-    "credit_standard": 0,
-    "credit_premium": 0,
-    "corporate": 0
-  },
-  "highest_fee_transaction_id": "string"
-}
-```
+**Sheet 1 — name: `Transaction Fees`**
+Headers (row 1): `transaction_id`, `card_type`, `amount`, `fee`, `rate_tier`
+One row per transaction (200 rows), sorted by `transaction_id` ascending.
+- `fee`: calculated fee as a number, rounded to 4 decimal places
+- `rate_tier`: the tier applied, exactly one of: `"debit"`, `"credit_standard_low"`, `"credit_standard_high"`, `"credit_premium_low"`, `"credit_premium_high"`, `"corporate"`
 
-Round all fee values to 4 decimal places.
+**Sheet 2 — name: `Summary`**
+Headers (row 1): `card_type`, `n_transactions`, `total_fees`, `avg_fee`
+One row per card type, sorted alphabetically by `card_type`.
+- `total_fees` and `avg_fee`: rounded to 4 decimal places
+
+Column names must match exactly (case-sensitive). Values must be stored as numbers, not strings.

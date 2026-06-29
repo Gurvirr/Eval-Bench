@@ -2,36 +2,58 @@
 set -e
 
 python3 << 'EOF'
-import json
 import pandas as pd
+from openpyxl import Workbook
 from pathlib import Path
 
 df = pd.read_csv("/root/data/transactions.csv")
 
-def compute_fee(row):
+def compute_fee_and_tier(row):
     ct = row["card_type"]
     a  = float(row["amount"])
     if ct == "debit":
-        return round(a * 0.005 + 0.10, 4)
+        return round(a * 0.005 + 0.10, 4), "debit"
     elif ct == "credit_standard":
-        return round(a * 0.015 + 0.15, 4) if a < 100 else round(a * 0.018 + 0.20, 4)
+        if a < 100:
+            return round(a * 0.015 + 0.15, 4), "credit_standard_low"
+        else:
+            return round(a * 0.018 + 0.20, 4), "credit_standard_high"
     elif ct == "credit_premium":
-        return round(a * 0.022 + 0.25, 4) if a < 200 else round(a * 0.025 + 0.30, 4)
-    else:  # corporate
-        return round(a * 0.028 + 0.35, 4)
+        if a < 200:
+            return round(a * 0.022 + 0.25, 4), "credit_premium_low"
+        else:
+            return round(a * 0.025 + 0.30, 4), "credit_premium_high"
+    else:
+        return round(a * 0.028 + 0.35, 4), "corporate"
 
-df["fee"] = df.apply(compute_fee, axis=1)
+fees, tiers = zip(*df.apply(compute_fee_and_tier, axis=1))
+df["fee"]       = fees
+df["rate_tier"] = tiers
+df = df.sort_values("transaction_id").reset_index(drop=True)
 
-fees_by_type = df.groupby("card_type")["fee"].sum().round(4).to_dict()
-n_by_type    = df.groupby("card_type").size().to_dict()
-top_txn      = df.loc[df["fee"].idxmax(), "transaction_id"]
+summary = df.groupby("card_type", as_index=False).agg(
+    n_transactions=("fee","count"),
+    total_fees=("fee","sum"),
+    avg_fee=("fee","mean"),
+).sort_values("card_type").reset_index(drop=True)
+summary["total_fees"] = summary["total_fees"].round(4)
+summary["avg_fee"]    = summary["avg_fee"].round(4)
 
-result = {
-    "total_fees":               round(float(df["fee"].sum()), 4),
-    "fees_by_card_type":        {k: round(float(v), 4) for k, v in fees_by_type.items()},
-    "n_transactions_by_card_type": {k: int(v) for k, v in n_by_type.items()},
-    "highest_fee_transaction_id": str(top_txn),
-}
-Path("/root/results.json").write_text(json.dumps(result))
-print(json.dumps(result, indent=2))
+wb = Workbook()
+ws1 = wb.active
+ws1.title = "Transaction Fees"
+ws1.append(["transaction_id","card_type","amount","fee","rate_tier"])
+for _, r in df.iterrows():
+    ws1.append([r["transaction_id"], r["card_type"], float(r["amount"]),
+                float(r["fee"]), r["rate_tier"]])
+
+ws2 = wb.create_sheet("Summary")
+ws2.append(["card_type","n_transactions","total_fees","avg_fee"])
+for _, r in summary.iterrows():
+    ws2.append([r["card_type"], int(r["n_transactions"]),
+                float(r["total_fees"]), float(r["avg_fee"])])
+
+wb.save("/root/fee_audit.xlsx")
+print("Saved /root/fee_audit.xlsx")
+print(summary.to_string())
 EOF

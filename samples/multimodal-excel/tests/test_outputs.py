@@ -1,69 +1,81 @@
 """
-Verifier for multimodal-excel (3-sheet Excel + corrections CSV).
+Verifier for multimodal-excel task (Excel output with strict format).
 
-Agent must read Sales, Returns, corrections.csv, join on product_id,
-compute net = gross - returns + corrections by region.
+Agent must produce /root/output_report.xlsx with:
+- Sheet "Regional Summary": exact headers, alphabetical order, correct net values
+- Sheet "Product Detail": exact headers, sorted by product_id, correct values
 
 Traps:
-- Ignore Returns sheet → total too high (~54965 vs 52935)
-- Ignore corrections.csv → total off by 570
-- Use Targets sheet instead of Returns
-- Fail to join returns/corrections to regions
-
-Expected values:
-  total_gross: 54965.00
-  total_returns: 1460.00
-  total_corrections: -570.00
-  total_net: 52935.00
-  best_region: North
-  total_net_units: 866
+- Wrong sheet names (case-sensitive)
+- Wrong column names
+- Ignoring Returns or corrections.csv
+- Wrong sort order
+- Storing values as text instead of numbers
 """
-import json
+from openpyxl import load_workbook
 from pathlib import Path
 
-RESULTS_FILE = Path("/root/results.json")
-TOL = 1.0
+OUTPUT_FILE = Path("/root/output_report.xlsx")
+TOL = 0.05
 
 
-def load():
-    assert RESULTS_FILE.exists(), f"Missing: {RESULTS_FILE}"
-    return json.loads(RESULTS_FILE.read_text())
+def header_map(ws, row=1):
+    return {str(cell.value).strip(): idx for idx, cell in enumerate(ws[row], 1) if cell.value}
 
 
 class TestMultimodalExcel:
-    def test_output_exists(self):
-        assert RESULTS_FILE.exists()
+    def test_output_file_exists(self):
+        assert OUTPUT_FILE.exists(), f"Missing: {OUTPUT_FILE}"
 
-    def test_total_gross_revenue(self):
-        d = load()
-        val = float(d["total_gross_revenue"])
-        assert abs(val - 54965.00) < TOL, f"total_gross={val:.2f}, expected 54965.00"
+    def test_required_sheets(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        assert "Regional Summary" in wb.sheetnames, \
+            f"Missing sheet 'Regional Summary'. Found: {wb.sheetnames}"
+        assert "Product Detail" in wb.sheetnames, \
+            f"Missing sheet 'Product Detail'. Found: {wb.sheetnames}"
 
-    def test_total_net_revenue(self):
-        """
-        Must be 52935.00. If ~54965 → returns/corrections ignored.
-        If ~53505 → corrections ignored. If ~54395 → returns ignored.
-        """
-        d = load()
-        val = float(d["total_net_revenue"])
-        assert abs(val - 52935.00) < TOL, (
-            f"total_net_revenue={val:.2f}, expected 52935.00. "
-            f"Formula: gross ({d.get('total_gross_revenue')}) "
-            f"- returns ({d.get('total_returns_value')}) "
-            f"+ corrections ({d.get('total_corrections_value')})"
-        )
+    def test_regional_summary_headers(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Regional Summary"]
+        cols = header_map(ws)
+        for h in ["region","gross_revenue","total_returns","total_adjustments","net_revenue","net_units"]:
+            assert h in cols, f"Missing column '{h}' in Regional Summary"
 
-    def test_best_region(self):
-        d = load()
-        assert d["best_region_by_net_revenue"] == "North", \
-            f"best_region='{d['best_region_by_net_revenue']}', expected 'North'"
+    def test_regional_net_revenue(self):
+        """Net revenue per region must reflect gross - returns + corrections."""
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Regional Summary"]
+        cols = header_map(ws)
+        data = {}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if row[cols["region"]-1]:
+                data[str(row[cols["region"]-1])] = float(row[cols["net_revenue"]-1])
 
-    def test_north_net_revenue(self):
-        d = load()
-        val = float(d["net_revenue_by_region"]["North"])
-        assert abs(val - 17350.00) < TOL, f"North net={val:.2f}, expected 17350.00"
+        expected = {"East": 11800.00, "North": 17350.00, "South": 11405.00, "West": 12380.00}
+        for region, exp in expected.items():
+            assert region in data, f"Missing region '{region}'"
+            assert abs(data[region] - exp) < TOL, \
+                f"{region} net_revenue={data[region]:.2f}, expected {exp:.2f}"
 
-    def test_total_net_units(self):
-        d = load()
-        n = int(d["total_net_units"])
-        assert n == 866, f"total_net_units={n}, expected 866"
+    def test_regional_sorted_alphabetically(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Regional Summary"]
+        cols = header_map(ws)
+        regions = [str(row[cols["region"]-1]) for row in ws.iter_rows(min_row=2, values_only=True)
+                   if row[cols["region"]-1]]
+        assert regions == sorted(regions), \
+            f"Regions not sorted alphabetically: {regions}"
+
+    def test_product_detail_headers(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Product Detail"]
+        cols = header_map(ws)
+        for h in ["product_id","product_name","region","gross_revenue","return_value","adjustment","net_revenue"]:
+            assert h in cols, f"Missing column '{h}' in Product Detail"
+
+    def test_product_detail_row_count(self):
+        """Must have 8 product rows (one per product)."""
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Product Detail"]
+        rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if r[0]]
+        assert len(rows) == 8, f"Expected 8 product rows, got {len(rows)}"

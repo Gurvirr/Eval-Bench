@@ -2,35 +2,54 @@
 set -e
 
 python3 << 'EOF'
-import json
 import pandas as pd
+from openpyxl import Workbook
 from pathlib import Path
 
 sales       = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Sales")
 returns     = pd.read_excel("/root/data/weekly_report.xlsx", sheet_name="Returns")
 corrections = pd.read_csv("/root/data/corrections.csv")
 
-total_gross       = round(float(sales["gross_revenue"].sum()), 2)
-total_returns_val = round(float(returns["return_value"].sum()), 2)
-total_corr_val    = round(float(corrections["adjustment"].sum()), 2)
-total_net         = round(total_gross - total_returns_val + total_corr_val, 2)
-
 merged = sales.merge(returns[["product_id","return_value","return_units"]], on="product_id", how="left").fillna(0)
 merged = merged.merge(corrections[["product_id","adjustment"]], on="product_id", how="left").fillna(0)
 merged["net_revenue"] = merged["gross_revenue"] - merged["return_value"] + merged["adjustment"]
 merged["net_units"]   = merged["units_sold"] - merged["return_units"]
 
-by_region = merged.groupby("region")[["net_revenue","net_units"]].sum()
+# Regional Summary
+regional = merged.groupby("region", as_index=False).agg(
+    gross_revenue=("gross_revenue", "sum"),
+    total_returns=("return_value",  "sum"),
+    total_adjustments=("adjustment","sum"),
+    net_revenue=("net_revenue",     "sum"),
+    net_units=("net_units",         "sum"),
+).sort_values("region").reset_index(drop=True)
 
-result = {
-    "total_gross_revenue":      total_gross,
-    "total_returns_value":      total_returns_val,
-    "total_corrections_value":  total_corr_val,
-    "total_net_revenue":        total_net,
-    "net_revenue_by_region": {r: round(float(v), 2) for r, v in by_region["net_revenue"].items()},
-    "best_region_by_net_revenue": str(by_region["net_revenue"].idxmax()),
-    "total_net_units": int(by_region["net_units"].sum()),
-}
-Path("/root/results.json").write_text(json.dumps(result))
-print(json.dumps(result, indent=2))
+for col in ["gross_revenue","total_returns","total_adjustments","net_revenue"]:
+    regional[col] = regional[col].round(2)
+regional["net_units"] = regional["net_units"].astype(int)
+
+# Product Detail
+detail = merged[["product_id","product_name","region","gross_revenue","return_value","adjustment","net_revenue"]].copy()
+for col in ["gross_revenue","return_value","adjustment","net_revenue"]:
+    detail[col] = detail[col].round(2)
+detail = detail.sort_values("product_id").reset_index(drop=True)
+
+# Write Excel output
+wb = Workbook()
+ws1 = wb.active
+ws1.title = "Regional Summary"
+ws1.append(["region","gross_revenue","total_returns","total_adjustments","net_revenue","net_units"])
+for _, row in regional.iterrows():
+    ws1.append([row["region"], row["gross_revenue"], row["total_returns"],
+                row["total_adjustments"], row["net_revenue"], row["net_units"]])
+
+ws2 = wb.create_sheet("Product Detail")
+ws2.append(["product_id","product_name","region","gross_revenue","return_value","adjustment","net_revenue"])
+for _, row in detail.iterrows():
+    ws2.append([row["product_id"], row["product_name"], row["region"],
+                row["gross_revenue"], row["return_value"], row["adjustment"], row["net_revenue"]])
+
+wb.save("/root/output_report.xlsx")
+print("Saved /root/output_report.xlsx")
+print(regional[["region","net_revenue","net_units"]].to_string())
 EOF

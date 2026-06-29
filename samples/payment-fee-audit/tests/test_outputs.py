@@ -1,68 +1,92 @@
 """
-Verifier for payment-fee-audit task.
+Verifier for payment-fee-audit task (Excel output with strict format).
 
-Agent must read the PDF fee schedule to extract tiered rates, then apply them.
-A model that guesses typical interchange rates (1.5-2% flat) will produce
-wrong totals and fail.
+Agent must produce /root/fee_audit.xlsx with:
+- Sheet "Transaction Fees": exact headers, 200 rows sorted by transaction_id
+  - rate_tier must use exact string values (e.g. "credit_standard_low")
+  - fee must match rates from PDF exactly
+- Sheet "Summary": exact headers, sorted alphabetically by card_type
 
-Expected values (seed=42):
-  total_fees: 827.4824
-  debit fees: 97.6967 (n=71)
-  credit_standard fees: 293.4092 (n=58)
-  credit_premium fees: 324.9452 (n=55)
-  corporate fees: 111.4313 (n=16)
+Traps:
+- Wrong sheet names
+- Wrong rate_tier strings
+- Using flat rate instead of tiered rates from PDF
+- Storing fees as strings
+- Wrong sort order
 """
-import json
+from openpyxl import load_workbook
 from pathlib import Path
 
-RESULTS_FILE = Path("/root/results.json")
-TOL = 1.0  # allow $1 tolerance for rounding differences
+OUTPUT_FILE = Path("/root/fee_audit.xlsx")
+TOL = 0.01
+
+VALID_TIERS = {"debit","credit_standard_low","credit_standard_high",
+               "credit_premium_low","credit_premium_high","corporate"}
+
+EXPECTED_SUMMARY = {
+    "corporate":        {"n": 16,  "total": 111.4313},
+    "credit_premium":   {"n": 55,  "total": 324.9452},
+    "credit_standard":  {"n": 58,  "total": 293.4092},
+    "debit":            {"n": 71,  "total":  97.6967},
+}
 
 
-def load():
-    assert RESULTS_FILE.exists(), f"Missing: {RESULTS_FILE}"
-    return json.loads(RESULTS_FILE.read_text())
+def header_map(ws, row=1):
+    return {str(c.value).strip(): i for i, c in enumerate(ws[row], 1) if c.value}
 
 
 class TestPaymentFeeAudit:
     def test_output_exists(self):
-        assert RESULTS_FILE.exists()
+        assert OUTPUT_FILE.exists(), f"Missing: {OUTPUT_FILE}"
 
-    def test_total_fees_correct(self):
-        """
-        Total fees must be ~827.48. A model using flat 1.5% rate gets ~518.
-        A model using flat 2% gets ~690. Only the tiered rates from the PDF give ~827.
-        """
-        d = load()
-        total = float(d["total_fees"])
-        assert abs(total - 827.4824) < TOL, (
-            f"total_fees={total:.4f}, expected ~827.4824. "
-            f"Check that you read the tiered rates from fee_schedule.pdf. "
-            f"A flat 1.5% rate gives ~518; correct tiered rates give ~827."
-        )
+    def test_required_sheets(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        assert "Transaction Fees" in wb.sheetnames, \
+            f"Missing 'Transaction Fees'. Found: {wb.sheetnames}"
+        assert "Summary" in wb.sheetnames, \
+            f"Missing 'Summary'. Found: {wb.sheetnames}"
 
-    def test_debit_fees_correct(self):
-        d = load()
-        fees = float(d["fees_by_card_type"]["debit"])
-        assert abs(fees - 97.6967) < TOL, \
-            f"debit fees={fees:.4f}, expected ~97.6967 (rate: 0.5% + $0.10)"
+    def test_transaction_fees_headers(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        cols = header_map(wb["Transaction Fees"])
+        for h in ["transaction_id","card_type","amount","fee","rate_tier"]:
+            assert h in cols, f"Missing column '{h}' in Transaction Fees"
 
-    def test_credit_standard_fees_correct(self):
-        d = load()
-        fees = float(d["fees_by_card_type"]["credit_standard"])
-        assert abs(fees - 293.4092) < TOL, \
-            f"credit_standard fees={fees:.4f}, expected ~293.4092 (tiered: 1.5%+$0.15 / 1.8%+$0.20)"
+    def test_row_count(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Transaction Fees"]
+        rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if r[0]]
+        assert len(rows) == 200, f"Expected 200 rows, got {len(rows)}"
 
-    def test_credit_premium_fees_correct(self):
-        d = load()
-        fees = float(d["fees_by_card_type"]["credit_premium"])
-        assert abs(fees - 324.9452) < TOL, \
-            f"credit_premium fees={fees:.4f}, expected ~324.9452 (tiered: 2.2%+$0.25 / 2.5%+$0.30)"
+    def test_rate_tier_values(self):
+        """rate_tier must use exact tier string names."""
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Transaction Fees"]
+        cols = header_map(ws)
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[0]: continue
+            tier = str(row[cols["rate_tier"]-1])
+            assert tier in VALID_TIERS, \
+                f"Invalid rate_tier='{tier}'. Must be one of {sorted(VALID_TIERS)}"
 
-    def test_transaction_counts_correct(self):
-        d = load()
-        counts = d["n_transactions_by_card_type"]
-        assert int(counts["debit"]) == 71, f"debit count={counts['debit']}, expected 71"
-        assert int(counts["credit_standard"]) == 58
-        assert int(counts["credit_premium"]) == 55
-        assert int(counts["corporate"]) == 16
+    def test_summary_total_fees(self):
+        """Total fees by card type must match tiered rates from PDF."""
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Summary"]
+        cols = header_map(ws)
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[0]: continue
+            ct    = str(row[cols["card_type"]-1])
+            total = float(row[cols["total_fees"]-1])
+            if ct in EXPECTED_SUMMARY:
+                exp = EXPECTED_SUMMARY[ct]["total"]
+                assert abs(total - exp) < TOL, \
+                    f"{ct} total_fees={total:.4f}, expected ~{exp:.4f}"
+
+    def test_summary_sorted_alphabetically(self):
+        wb = load_workbook(OUTPUT_FILE, data_only=True)
+        ws = wb["Summary"]
+        cols = header_map(ws)
+        card_types = [str(r[cols["card_type"]-1]) for r in ws.iter_rows(min_row=2, values_only=True) if r[0]]
+        assert card_types == sorted(card_types), \
+            f"Summary not sorted alphabetically by card_type: {card_types}"

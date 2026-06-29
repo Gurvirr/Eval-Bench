@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/
 RUN pip3 install --break-system-packages \
     numpy==1.26.4 \
     pandas==2.2.3 \
+    openpyxl==3.1.5 \
     reportlab==4.2.5 \
     pdfplumber==0.11.4
 
