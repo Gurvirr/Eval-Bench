@@ -117,7 +117,8 @@ def compute_fee(row):
 
 df["correct_fee"] = df.apply(compute_fee, axis=1)
 
-df.to_csv(OUT / "transactions.csv", index=False)
+# Save WITHOUT correct_fee — don't leak the answer
+df.drop(columns=["correct_fee"]).to_csv(OUT / "transactions.csv", index=False)
 
 print(f"Total correct fees: {df['correct_fee'].sum():.4f}")
 print(f"Disputed txns: {df['is_disputed'].sum()}")
