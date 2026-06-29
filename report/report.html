@@ -45,22 +45,20 @@
 
 <h2>1. Distribution</h2>
 
-<p>The benchmark targets a single failure class: tasks where the model produces a confident, plausible-looking answer that is wrong because it used data that would not have been available at prediction time. This is target leakage in its various forms.</p>
+<p>The benchmark targets one failure class: tasks where the model uses data that would not have been available at prediction time. Every task isolates a specific instance of this — target leakage in its various forms.</p>
 
-<p>The slice is narrow by design. A focused eval that cleanly isolates one failure mode gives cleaner signal than a broad benchmark mixing unrelated difficulties. We piloted 14 tasks across different failure modes, ran each against gemini-3.5-flash, and curated down to 7. The curation process itself revealed something useful: the model handles documented methodology errors (Bonferroni correction, macro F1, join deduplication, Simpson's paradox) reliably. Leakage reasoning is where it fails.</p>
+<p>We piloted 14 tasks across different failure modes. The curation process revealed something concrete: gemini-3.5-flash handles documented methodology errors reliably (Bonferroni correction, macro F1, join deduplication, Simpson's paradox). It fails on leakage reasoning. That narrowed the benchmark to 7 tasks that actually provide signal.</p>
 
-<h3>What is in scope</h3>
+<h3>In scope</h3>
 <ul>
-  <li>Supervised learning pipelines where features may or may not be legitimate at prediction time</li>
-  <li>Multi-file and multi-format inputs requiring domain knowledge to parse correctly</li>
-  <li>Tasks where the correct answer requires identifying <em>what data not to use</em></li>
+  <li>Supervised learning pipelines where a feature column may or may not be legitimate at prediction time</li>
+  <li>Multi-format inputs (PDF, Excel, multi-file CSV) requiring domain knowledge to parse correctly</li>
+  <li>Tasks where the correct answer requires identifying what data <em>not</em> to use</li>
 </ul>
 
-<h3>What is out of scope</h3>
+<h3>Out of scope</h3>
 <ul>
-  <li>Code generation correctness (syntax, style)</li>
-  <li>Open-ended analysis without verifiable ground truth</li>
-  <li>Infrastructure, deployment, model serving</li>
+  <li>Code generation correctness, open-ended analysis without verifiable ground truth, infrastructure</li>
 </ul>
 
 <h2>2. Difficulty Profile</h2>
@@ -125,11 +123,11 @@
 </table>
 
 <div class="box">
-<strong>The pattern from curation:</strong> gemini-3.5-flash reliably applies documented DS best practices. It knows Bonferroni correction, macro F1, join safety, and cohort analysis formulas because these are extensively covered in its training data. It fails when it must decide whether a feature column is <em>epistemically valid</em> at prediction time, which requires reasoning about causality and information flow that is not prompted by the task description.
+<strong>The pattern:</strong> gemini-3.5-flash reliably applies documented DS best practices. It fails when it must decide whether a feature is valid at prediction time — reasoning that is not documented in any textbook and is not prompted by the task description.
 </div>
 
-<h3>What the difficulty curve looks like</h3>
-<p>Three tasks fail 100% of the time (pass@1 = 0.0). One fails 67% of the time (pass@1 = 0.33). Three pass 84-97% of the time (pass@1 &gt; 0.8). This is a bimodal distribution: tasks either hit the leakage reasoning gap cleanly or the model handles them correctly. There is no middle ground where the model struggles but occasionally succeeds. The leakage tasks are not harder versions of the passing tasks; they are testing a different capability altogether.</p>
+<h3>Difficulty curve</h3>
+<p>The distribution is bimodal. Three tasks fail 100% of the time. One fails 67%. Three pass at 84-97%. There is no gradual slope. Tasks either hit the leakage reasoning gap or the model handles them correctly. The passing tasks are not easier versions of the failing tasks — they test a different thing entirely.</p>
 
 <h2>3. Research Awareness</h2>
 
@@ -168,20 +166,18 @@
 </table>
 
 <h3>What the literature told us to build</h3>
-<p>DABStep's 16% pass rate on hard tasks comes from requiring agents to cross-reference multiple documents with domain-specific knowledge. That shaped payment-fee-audit (4 interacting rules across PDF sections) and pdf-invoice-reconciliation (3 PDFs + ledger). MLE-Bench's failure analysis specifically named feature leakage as a top error type, which led to the three leakage tasks. DA-Code's finding that data wrangling is the hardest category (harder than ML) shaped multimodal-excel.</p>
+<p>DABStep's 16% pass rate comes from requiring cross-referencing multiple documents with domain knowledge — that shaped payment-fee-audit and pdf-invoice-reconciliation. MLE-Bench named feature leakage as a top failure type — that led to the three leakage tasks. DA-Code's finding that data wrangling is harder than ML shaped multimodal-excel.</p>
 
-<p>The curation process confirmed CausalPitfalls' finding that models fail on causal reasoning when data contradicts prior knowledge, but showed gemini-3.5-flash does not fail on the cleaner versions of these tasks (Simpson's paradox, Bonferroni correction). The model's training data covers these as well-documented techniques.</p>
+<p>CausalPitfalls showed models fail on causal reasoning when data contradicts prior knowledge, but curation showed gemini-3.5-flash handles the clean versions (Simpson's paradox, Bonferroni). Those tasks were dropped. The model knows these techniques from training data.</p>
 
 <h2>4. Scale Plan</h2>
 
-<p>Growing from 7 to 1,000 tasks means treating each active task as a parameterizable template and building a generation-validation pipeline.</p>
-
-<h3>Template parameterization</h3>
-<p>Every task in the benchmark was generated from a <code>build_inputs.py</code> script that accepts a random seed and domain parameters. To generate variants:</p>
+<p>Every task was generated from a <code>build_inputs.py</code> script with a seed and domain parameters. Scaling to 1,000 tasks means parameterizing the templates and automating the QA loop.</p>
+<h3>Template variants</h3>
 <ul>
-  <li><strong>Leakage tasks</strong>: vary the domain (loan default, insurance claim, subscription churn, employee attrition), the leaking column name and description, the fraction of positive examples, and the seed. One template generates 100+ distinct tasks all testing the same failure mode.</li>
-  <li><strong>Timeseries lookahead</strong>: vary the time series domain (retail sales, energy consumption, web traffic), the window size, the presence of a regime change, and the degree of autocorrelation.</li>
-  <li><strong>PDF domain tasks</strong>: vary the fee schedule structure (more tiers, conditional rules, currency conversion), number of invoices, and types of discrepancies. Source real public financial documents (card network interchange fee schedules, SEC 10-K filings, public procurement records).</li>
+  <li><strong>Leakage tasks:</strong> vary the domain (loan default, insurance claim, subscription churn, employee attrition), leaking column name, positive rate, seed. One template generates 100+ tasks.</li>
+  <li><strong>Timeseries lookahead:</strong> vary domain (retail, energy, traffic), window size, regime change point.</li>
+  <li><strong>PDF domain tasks:</strong> vary fee schedule tiers, number of invoices, discrepancy types. Source real public documents (card network schedules, SEC filings, procurement records).</li>
 </ul>
 
 <h3>Public data sources</h3>
@@ -210,18 +206,16 @@
 <p>Tasks that fail step 3 are either discarded or flagged for manual review. The target is a 30-40% admission rate from generated candidates to final benchmark. This keeps calibration without requiring manual review of every task.</p>
 
 <h3>Automated loops used in this project</h3>
-<p>Four scripts handle the full evaluation pipeline:</p>
 <ul>
   <li><code>scripts/qa_all.sh</code>: oracle+nop validation on all tasks in one command</li>
-  <li><code>scripts/run_model.bat</code>: runs all tasks against the model with configurable trial count</li>
-  <li><code>scripts/aggregate_scores.py</code>: reads all job results and computes pass@1/pass@3/mean per task, most-recent-N filtering</li>
-  <li><code>scripts/classify_failures.py</code>: reads trajectory files and classifies failure types automatically</li>
+  <li><code>scripts/run_model.bat</code>: runs all tasks against the model, configurable trial count</li>
+  <li><code>scripts/aggregate_scores.py</code>: reads all job results, computes pass@1/pass@3/mean, most-recent-N filtering</li>
+  <li><code>scripts/classify_failures.py</code>: reads trajectory files and classifies failure types</li>
 </ul>
-<p>These scripts reduced per-task QA from ~15 minutes of manual validation to 30 seconds, and score aggregation from reading individual files to one command.</p>
 
 <h2>5. Failure Analysis</h2>
 
-<p>All three zero-pass-rate tasks were analyzed through Harbor's trajectory files. The failures are genuine reasoning errors, not task design problems: the model runs to completion, produces syntactically valid output, and fails the verifier because of a specific wrong assumption.</p>
+<p>All three zero-pass-rate tasks were inspected through Harbor's trajectory files. Each failure is a genuine reasoning error: the model runs to completion, produces valid output, and fails the verifier because it used a feature it should not have.</p>
 
 <h3>leakage-imputation: the model uses a post-default feature to predict defaults</h3>
 
@@ -240,30 +234,25 @@ and `loan_id` to train a logistic regression model.</pre>
 
 <p>The oracle solution achieves ROC-AUC ~0.70 by excluding <code>days_past_due</code> and using only the legitimate pre-loan features. The gap between 1.0 and 0.70 is itself a signal the model does not catch.</p>
 
-<h3>churn-prediction-leakage: the model uses post-cancellation support tickets to predict churn</h3>
+<h3>churn-prediction-leakage</h3>
 
-<p>The dataset contains <code>support_tickets_after_cancel</code>: the number of support tickets a customer filed after initiating cancellation. This is zero for retained customers and positive for churned customers. It is an outcome-correlated feature that only exists after the churn decision.</p>
+<p><code>support_tickets_after_cancel</code> is the number of support tickets filed after a customer cancels. It is zero for retained customers, positive for churned customers, and does not exist before the churn decision is made. The model includes it as a standard feature, achieves ROC-AUC of 1.0000, and reports it as the most predictive feature. Same mechanism as leakage-imputation, different domain.</p>
 
-<p>The model includes it as a standard feature, achieves ROC-AUC of 1.0000, and reports it as the most predictive feature. Same failure mechanism as leakage-imputation, different domain.</p>
+<h3>timeseries-lookahead</h3>
 
-<h3>timeseries-lookahead: the model uses today's value to predict today's value</h3>
+<p>The correct rolling mean is <code>df["sales"].shift(1).rolling(7).mean()</code> — look back only. The model writes:</p>
 
-<p>The task asks for a 7-day rolling mean of sales as a feature. The correct approach is <code>df["sales"].shift(1).rolling(7).mean()</code>, which uses only the 7 days before each row. The common pattern is <code>df["sales"].rolling(7).mean()</code>, which includes the current row in its own window.</p>
+<pre>Plan: df["rolling_mean_7"] = df["sales"].rolling(7, min_periods=1).mean()</pre>
 
-<p>From a failed trajectory:</p>
+<p>This is the standard pandas example from documentation. Including the current row in its own rolling window is look-ahead bias. The difference in the computed value at the verifier's check point is about 0.40 — small enough that the model would not catch it from the output.</p>
 
-<pre>Analysis: I'll create the lag feature by computing a 7-day rolling mean.
-Plan: df["rolling_mean_7"] = df["sales"].rolling(7, min_periods=1).mean()</pre>
+<h3>The common thread</h3>
 
-<p>The model applies the standard pandas rolling syntax from documentation examples. The difference in the computed rolling mean at row 364 (the verifier check point) is approximately 0.40, which is small enough that the model would not notice it is wrong from the output alone. The failure is silent.</p>
+<p>All three failing tasks require the model to ask "would I have this data when making the prediction?" without being told to. The model never asks. It uses everything available.</p>
 
-<h3>Why these three and not the others</h3>
+<p>The seven dropped tasks all have explicit correct answers the model knows from training data. The three passing multimodal tasks require reading documents and executing logic, but the logic is written in the documents. No hidden trap. The model just needs to execute correctly.</p>
 
-<p>All three failing tasks share one property: there is no explicit instruction in the prompt telling the model to exclude a specific feature or use a specific shift. The model must spontaneously ask "would I have this data at prediction time?" and correctly answer no. The model does not do this unprompted.</p>
-
-<p>All seven dropped tasks have explicit correct answers the model applies correctly because the techniques are documented in training data. The three passing multimodal tasks (payment-fee-audit, pdf-invoice-reconciliation, multimodal-excel) require reading documents and applying logic, but the logic itself is explicit in the documents. There is no hidden trap the model must discover; it must only execute correctly.</p>
-
-<p>This narrows the actionable headroom to a specific, reproducible failure pattern: frontier models do not spontaneously audit feature validity at prediction time. Tasks that exploit this gap produce consistent failures. Tasks that test whether the model knows the right methodology do not.</p>
+<p>The actionable finding: frontier models do not spontaneously audit feature validity at prediction time. This is a reproducible, exploitable gap that generates consistent failures.</p>
 
 <footer>
   eval-bench &nbsp;|&nbsp; Gurvirr/Eval-Bench on GitHub &nbsp;|&nbsp; June 2026
