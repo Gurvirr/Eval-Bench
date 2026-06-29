@@ -58,6 +58,25 @@ feb = make_cohort(2, 420, [1.0, 0.55, 0.38, 0.25], RNG)
 # Mar cohort: 380 users
 mar = make_cohort(3, 380, [1.0, 0.50, 0.35, 0.22], RNG)
 
+# Add leaking column: final_status is determined at END of observation period
+# (future data — not available at the time of each monthly measurement)
+# Users with any activity in month 3+ are "retained", others "churned"
+def add_final_status(df, base_month):
+    def status(active_months):
+        if not active_months:
+            return "churned"
+        months = active_months.split(",")
+        # retained if active in last observed month
+        last = f"2024-{base_month+3:02d}" if base_month+3 <= 12 else f"2025-{base_month+3-12:02d}"
+        return "retained" if last in months else "churned"
+    df = df.copy()
+    df["final_status"] = df["active_months"].apply(status)
+    return df
+
+jan = add_final_status(jan, 1)
+feb = add_final_status(feb, 2)
+mar = add_final_status(mar, 3)
+
 jan.to_csv(OUT / "cohort_jan.csv", index=False)
 feb.to_csv(OUT / "cohort_feb.csv", index=False)
 mar.to_csv(OUT / "cohort_mar.csv", index=False)

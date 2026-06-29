@@ -71,16 +71,14 @@ inv3_total = make_invoice_pdf(OUT/"invoice_cleanco.pdf", "CleanCo Services", "IN
 
 # Ledger CSV — contains discrepancies
 ledger_rows = [
-    # Invoice 1 entries — but Standing Desks recorded wrong ($450 instead of $900)
-    {"entry_id": "L001", "vendor": "Acme Supplies",   "description": "Office Chairs (x5)",  "amount": 600.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15"},
-    {"entry_id": "L002", "vendor": "Acme Supplies",   "description": "Standing Desks (x2)", "amount": 450.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15"},  # WRONG: should be 900.00
-    {"entry_id": "L003", "vendor": "Acme Supplies",   "description": "Monitor Stands (x10)","amount": 350.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15"},
+    {"entry_id": "L001", "vendor": "Acme Supplies",   "description": "Office Chairs (x5)",  "amount": 600.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15", "payment_status": "paid"},
+    {"entry_id": "L002", "vendor": "Acme Supplies",   "description": "Standing Desks (x2)", "amount": 450.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15", "payment_status": "paid"},  # WRONG: should be 900.00
+    {"entry_id": "L003", "vendor": "Acme Supplies",   "description": "Monitor Stands (x10)","amount": 350.00, "invoice_ref": "INV-2024-001", "date": "2024-01-15", "payment_status": "paid"},
     # Invoice 2 NOT in ledger (missing)
-    # Invoice 3 entries — correct
-    {"entry_id": "L004", "vendor": "CleanCo Services","description": "Cleaning Service - Jan","amount": 350.00,"invoice_ref": "INV-2024-003","date": "2024-01-31"},
-    {"entry_id": "L005", "vendor": "CleanCo Services","description": "Supplies Restocking",  "amount":  85.50, "invoice_ref": "INV-2024-003","date": "2024-01-31"},
-    # Phantom entry — no invoice
-    {"entry_id": "L006", "vendor": "Unknown Vendor",  "description": "Miscellaneous Expense","amount": 275.00, "invoice_ref": None,          "date": "2024-01-28"},
+    {"entry_id": "L004", "vendor": "CleanCo Services","description": "Cleaning Service - Jan","amount": 350.00,"invoice_ref": "INV-2024-003","date": "2024-01-31", "payment_status": "paid"},
+    {"entry_id": "L005", "vendor": "CleanCo Services","description": "Supplies Restocking",  "amount":  85.50, "invoice_ref": "INV-2024-003","date": "2024-01-31", "payment_status": "paid"},
+    # Phantom entry — no invoice, marked as "pending" (not paid) — model may skip it
+    {"entry_id": "L006", "vendor": "Unknown Vendor",  "description": "Miscellaneous Expense","amount": 275.00, "invoice_ref": None,          "date": "2024-01-28", "payment_status": "pending"},
 ]
 
 pd.DataFrame(ledger_rows).to_csv(OUT / "ledger.csv", index=False)

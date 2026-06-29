@@ -35,15 +35,26 @@ for n, sev, arm, rate in [
 df = pd.DataFrame(rows).sample(frac=1, random_state=42).reset_index(drop=True)
 df.insert(0, "patient_id", range(1, len(df)+1))
 
-# trial.csv — no severity column
-trial = df[["patient_id", "treatment", "recovered"]]
-trial.to_csv(OUT / "trial.csv", index=False)
+# Add leaking column: outcome_confirmed is available only AFTER the trial ends
+# It encodes the "true" clinical severity as confirmed by post-trial autopsy/review
+# This is correlated with recovered but not available at treatment time
+# A model that groups by outcome_confirmed instead of severity_group gets different (wrong) rates
+df["outcome_confirmed"] = df.apply(
+    lambda r: "severe_case" if r["severity"] == "severe" and r["recovered"] == 0
+    else ("mild_case" if r["severity"] == "mild" and r["recovered"] == 1
+          else "moderate_case"), axis=1
+)
 
-# patient_metadata.csv — severity + distractors
 meta = pd.DataFrame({
     "patient_id":     df["patient_id"],
     "severity_group": df["severity"],
     "age":            RNG.integers(25, 80, len(df)),
     "hospital_id":    RNG.integers(1, 6, len(df)),
+    "outcome_confirmed": df["outcome_confirmed"],  # post-trial data — leaks outcome
 })
+
+# trial.csv — no severity column
+trial = df[["patient_id", "treatment", "recovered"]]
+trial.to_csv(OUT / "trial.csv", index=False)
+
 meta.to_csv(OUT / "patient_metadata.csv", index=False)
