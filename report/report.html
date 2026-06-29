@@ -8,6 +8,7 @@
   h1  { font-size: 2em; font-weight: 700; margin-bottom: 2px; }
   h2  { font-size: 1.35em; font-weight: 650; margin-top: 52px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
   h3  { font-size: 1.05em; font-weight: 650; margin-top: 28px; color: #374151; }
+  h4  { font-size: 0.97em; font-weight: 600; margin-top: 20px; color: #1f2937; }
   .sub { color: #6b7280; margin-bottom: 36px; }
   table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.91em; }
   th { background: #f3f4f6; font-weight: 600; padding: 8px 12px; border: 1px solid #d1d5db; text-align: left; }
@@ -206,20 +207,27 @@
 <p>Tasks that fail step 3 are either discarded or flagged for manual review. The target is a 30-40% admission rate from generated candidates to final benchmark. This keeps calibration without requiring manual review of every task.</p>
 
 <h3>AI agent loops used in this project</h3>
-<p>The task design and evaluation pipeline was run as a series of AI-assisted iteration loops using Kiro (Claude):</p>
-<ul>
-  <li><strong>Task generation loop:</strong> described each task's failure mode and data structure to the AI, which generated build_inputs.py, solution/solve.sh, and test_outputs.py. Reviewed the output, ran oracle/nop checks, fed errors back to the agent, and iterated until oracle=1 and nop=0. Each task took 2-4 iterations.</li>
-  <li><strong>Difficulty calibration loop:</strong> ran a task against gemini-3.5-flash, pasted the passing trajectory back to the agent with "the model solved this, here's how, make it harder." The agent redesigned the data or instruction. Repeated until consistent failures. This loop identified that the model passes methodology traps but fails on information validity questions.</li>
-  <li><strong>Literature scan loop:</strong> gave the agent a list of benchmark papers and asked it to identify which failure modes had the strongest evidence for headroom below 30%. The output directly shaped which tasks to build and which to drop.</li>
-  <li><strong>Failure classification loop:</strong> fed trajectory.json files from failed runs to the agent and asked it to classify the failure type (took the leaking feature, wrong rolling syntax, etc.) and extract the relevant excerpt. Used directly in section 5.</li>
-</ul>
+<p>The entire benchmark was built through AI-assisted iteration loops using Kiro (Claude). The AI was treated as a coworker that generates and iterates on implementation, not just a code autocomplete tool.</p>
 
-<h3>Scripted automation loops</h3>
+<h4>Task scaffold generation</h4>
+<p>For each task, I described the failure mode, data structure, and verifier logic in natural language. The agent generated all six files (build_inputs.py, Dockerfile, instruction.md, task.toml, solution/solve.sh, test_outputs.py) in one pass. I ran <code>harbor run -a oracle</code> and <code>harbor run -a nop</code>, pasted the output back to the agent with any failures, and iterated until both passed. Average 2-3 cycles per task. This is faster than hand-writing boilerplate and also catches logical errors earlier, since the agent catches inconsistencies between the solution and the verifier that I might miss on a first pass.</p>
+
+<h4>Difficulty calibration loop</h4>
+<p>After each task passed QA, I ran 3 trials against gemini-3.5-flash and pasted the trajectory from any passing runs back to the agent: "the model passed this task by doing X, here is the trajectory, what would make this harder?" The agent analyzed the trajectory and proposed changes to the data or instruction. This loop identified the core insight of the benchmark: the model passes any task where it knows what method to apply, and fails only when it must judge whether a data column is temporally valid. That finding came from reading trajectories together with the agent across 14 tasks over several iterations.</p>
+
+<h4>Literature scan</h4>
+<p>I gave the agent a list of benchmark papers (DSBench, DABStep, MLE-Bench, DA-Code, CausalPitfalls) and asked it to identify which failure modes had the strongest evidence for headroom under 30% pass rate, and map each to a task design. The output became the research section of this report and directly determined which 14 tasks to pilot. The agent cross-referenced pass rates across papers to find where multiple sources pointed at the same gap.</p>
+
+<h4>Failure classification loop</h4>
+<p>After collecting trajectory.json files from all failed runs, I fed batches to the agent and asked it to: (1) identify the exact step where the model made the wrong decision, (2) classify the failure type, and (3) extract a short quote that best illustrates the failure. The trajectory excerpts in section 5 came from this process. The agent caught nuances I would have missed manually, like the model actively reasoning about rounding methods across 29 steps before getting the fee calculation right.</p>
+
+<h4>Scripted automation</h4>
+<p>Alongside the agent loops, four scripts automate the repetitive parts of the pipeline:</p>
 <ul>
   <li><code>scripts/qa_all.sh</code>: oracle+nop validation on all tasks in one command</li>
-  <li><code>scripts/run_model.bat</code>: runs all tasks against the model, configurable trial count</li>
-  <li><code>scripts/aggregate_scores.py</code>: reads all job results, computes pass@1/pass@3/mean, most-recent-N filtering</li>
-  <li><code>scripts/classify_failures.py</code>: reads trajectory files and classifies failure types</li>
+  <li><code>scripts/run_model.bat</code>: runs all tasks against the model, configurable trial count via <code>-k</code> flag</li>
+  <li><code>scripts/aggregate_scores.py</code>: reads all job results, computes pass@1/pass@3/mean with most-recent-N filtering so old runs from earlier iterations do not pollute current scores</li>
+  <li><code>scripts/classify_failures.py</code>: parses trajectory files and pattern-matches against known failure signatures</li>
 </ul>
 
 <h2>5. Failure Analysis</h2>
