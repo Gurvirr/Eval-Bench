@@ -10,7 +10,7 @@ Each task is a [Harbor](https://harborframework.com)-format problem isolating a 
 samples/        # Harbor-format task packages (one directory per task)
 report/         # Write-up: distribution rationale, difficulty profile, scale plan
 scripts/        # Automation: QA runner, score aggregator, failure classifier
-logs/           # harbor run output — gitignored, local only
+logs/           # harbor run output (gitignored)
 ```
 
 ## Quickstart

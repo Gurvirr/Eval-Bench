@@ -25,5 +25,8 @@ jobs/
 # Planning
 planning/
 
-# Sample zip (already extracted)
+# Archives
 *.zip
+
+# Reference task package (not authored here)
+sample-harbor-task/
